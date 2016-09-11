@@ -41,6 +41,65 @@ void readData(char *filename, double **dataMatrix){
 }
 
 /*
+    readMatrix
+        
+    input char pointer to file containing comma seperated floating point numbers
+    input dataMatrix to read data into
+    Reads data from data.txt into 2d array of doubles
+    Does the same as readData, but works with matrix of any dimensions
+*/
+double **readMatrix(char *filename, double **mat) {
+    //Open data file
+    FILE *fp = fopen(filename, "r");
+    
+    //Ensure file could be opened successfully
+    if(fp == NULL) {
+        fprintf(stderr, "Failed to open data file\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    //Count number of rows and columns in matrix
+    int curRow = 0;
+    int curCol = 0;
+    
+    //Read file row by row
+    char line[10000];
+    while(fgets(line, 10000, fp)) {
+        //Counts number of columns read on current line
+        curCol = 0;
+        
+        //Reallocate memory (provide additional memory for another row)
+        mat = (double **) realloc(mat, (curRow+1) * sizeof(double *));
+        
+        //Allocate memory for current row, starting with 1 column
+        mat[curRow] = (double *) malloc(sizeof(double) * (curCol +1));
+        
+        //Store string in pointer, rather than array
+        char *data = line;
+        //Offset into string (for scanf)
+        int offset;
+        
+        //Read all entries of current row into array
+        while(sscanf(data, "%lf%*c%n ", &mat[curRow][curCol], &offset) == 1) {
+            //Reallocate larger memory block for current row (add another column space)
+            //printf("Read %f at index %d:%d\n", mat[curRow][curCol], curRow, curCol);
+            curCol++;
+            mat[curRow] = realloc(mat[curRow], sizeof(double) * (curCol+1));
+            data += offset;
+        }
+        //Increment row counter
+        curRow++;
+    }
+    
+    //Calculate number of rows and columns
+    ROWS = curRow;
+    COLS = curCol;
+    
+    //Return matrix
+    return mat;
+}
+
+/*
 	readKeys
 
 	input char pointer to file containing space separated long longs
@@ -103,8 +162,9 @@ int main(int argc, char** argv){
 		dataMatrix[r] = (double*)malloc(COLS*sizeof(double));
 	}
 
-    //Read in matrix
-	readData(DATA_FILE, dataMatrix);
+    //Read in matrix, and record number of rows and columns in ROWS and COLS
+	//readData(DATA_FILE, dataMatrix);
+    dataMatrix = readMatrix(DATA_FILE, dataMatrix);
     
     //Free all dynamically allocated data
     freeData(dataMatrix, keyDatabase);

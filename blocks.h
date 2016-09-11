@@ -17,8 +17,10 @@ extern void readKeys(char*, long long*);
 //------------------------------------------------------------------
 // Package accessible variables and definitions
 //------------------------------------------------------------------
-#define ROWS 4400
-#define COLS 500
+//#define ROWS 4400
+//#define COLS 500
 #define DATA_FILE "data.txt"
 #define KEY_FILE "keys.txt"
 extern const char* programName;
+int ROWS = 4400;
+int COLS = 500;
