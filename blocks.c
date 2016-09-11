@@ -69,6 +69,24 @@ void readKeys(char *filename, long long *keyDatabase){
 	}
 }
 
+/*
+    freeData
+    
+    input dynamically allocated matrix and keyDatabase
+    Frees dynamically allocated data
+*/
+void freeData(double **mat, long long *keys) {
+    //Free all rows of matrix
+    for(int i=0; i<ROWS; i++) {
+        free(mat[i]);
+    }
+    //Free matrix
+    free(mat);
+    
+    //Free key database
+    free(keys);
+}
+
 
 int main(int argc, char** argv){
 	// Program name without /, cast to constant for file
@@ -85,8 +103,11 @@ int main(int argc, char** argv){
 		dataMatrix[r] = (double*)malloc(COLS*sizeof(double));
 	}
 
+    //Read in matrix
 	readData(DATA_FILE, dataMatrix);
-
+    
+    //Free all dynamically allocated data
+    freeData(dataMatrix, keyDatabase);
 
 	return EXIT_SUCCESS;
 }
