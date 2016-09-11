@@ -19,10 +19,6 @@ int main(void) {
     //Do the project here
     //TODO: PROJCET
     
-    
-    //Print matrix (test output to confirm reading is working properly)
-    //printMatrix(matrix, rows, cols);
-    
     //Free matrix
     freeMatrix(matrix, rows);
     
@@ -56,7 +52,7 @@ void freeMatrix(float **mat, int rows) {
 //Function opens input file and reads matrix into variable
 float **readMatrix(int *rows, int *cols, float **mat) {
     //Open data file
-    FILE *fp = fopen("test.txt", "r");
+    FILE *fp = fopen("data.txt", "r");
     
     //Ensure file could be opened successfully
     if(fp == NULL) {
@@ -69,8 +65,8 @@ float **readMatrix(int *rows, int *cols, float **mat) {
     int curCol = 0;
     
     //Read file row by row
-    char line[BUFSIZ];
-    while(fgets(line, BUFSIZ, fp)) {
+    char line[10000];
+    while(fgets(line, 10000, fp)) {
         //Counts number of columns read on current line
         curCol = 0;
         
@@ -82,13 +78,13 @@ float **readMatrix(int *rows, int *cols, float **mat) {
         
         //Store string in pointer, rather than array
         char *data = line;
-        
+        //Offset into string (for scanf)
         int offset;
         
         //Read all entries of current row into array
-        while(sscanf(data, "%f , %n ", &mat[curRow][curCol], &offset) == 1) {
+        while(sscanf(data, "%f%*c%n ", &mat[curRow][curCol], &offset) == 1) {
             //Reallocate larger memory block for current row (add another column space)
-            printf("Read %f at index %d:%d\n", mat[curRow][curCol], curRow, curCol);
+            //printf("Read %f at index %d:%d\n", mat[curRow][curCol], curRow, curCol);
             curCol++;
             mat[curRow] = realloc(mat[curRow], sizeof(float) * (curCol+1));
             data += offset;
