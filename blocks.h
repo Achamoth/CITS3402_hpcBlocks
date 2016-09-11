@@ -32,3 +32,10 @@ typedef struct Block {
     double sumOfElements;
     int column;
 } Block;
+//------------------------------------------------------------------
+// Struct declaration for collisions
+//------------------------------------------------------------------
+typedef struct Collision {
+    Block **collidingBlocks;
+    int numBlocksInCollision;
+} Collision;
