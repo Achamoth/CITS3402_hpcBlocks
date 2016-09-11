@@ -15,7 +15,7 @@ const char* programName;
 	input char pointer to file containing comma separated floating point numbers
 	Reads data from data.txt into 2d array of doubles ROWS x COLS in size
 */
-void readData(char *filename, double dataMatrix[ROWS][COLS]){
+void readData(char *filename, double **dataMatrix){
 	FILE *dataFile = fopen(filename, "r");
 
 	//	Null file pointer check
@@ -28,12 +28,11 @@ void readData(char *filename, double dataMatrix[ROWS][COLS]){
 
 	for(int r = 0; r < ROWS; ++r){
 		for(int c = 0; c < COLS; ++c){
-			fscanf(dataFile, "%lf[^,\n]", &dataMatrix[r][c]);
-			printf("%lf\n", dataMatrix[r][c]);
+			//  Use fscanf to skip the comma characters
+			fscanf(dataFile, "%lf%*c", &dataMatrix[r][c]);
+			printf("%lf found at index %d : %d\n", dataMatrix[r][c], r, c);
 		}
 	}
-
-
 
 	//	Close file pointer if open
 	if(dataFile != NULL){
@@ -75,11 +74,19 @@ int main(int argc, char** argv){
 	// Program name without /, cast to constant for file
 	programName = (const char*) strrchr(argv[0], '/') + 1;
 
-	double dataMatrix[ROWS][COLS] = {{0}};
+	// Allocate memory for keys
+	long long *keyDatabase = malloc(ROWS*sizeof(long long));
+	// Read in keys
+	readKeys(KEY_FILE, keyDatabase);
+
+	// Allocate memory for database
+	double **dataMatrix = (double**)malloc(ROWS*sizeof(double*));
+	for(int r = 0; r < ROWS; ++r){
+		dataMatrix[r] = (double*)malloc(COLS*sizeof(double));
+	}
+
 	readData(DATA_FILE, dataMatrix);
 
-	long long keyDatabase[ROWS];
-	readKeys(KEY_FILE, keyDatabase);
 
 	return EXIT_SUCCESS;
 }
