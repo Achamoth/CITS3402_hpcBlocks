@@ -82,7 +82,7 @@ double **readMatrix(char *filename, double **mat) {
         //Read all entries of current row into array
         while(sscanf(data, "%lf%*c%n ", &mat[curRow][curCol], &offset) == 1) {
             //Reallocate larger memory block for current row (add another column space)
-            //printf("Read %f at index %d:%d\n", mat[curRow][curCol], curRow, curCol);
+            printf("Read %f at index %d:%d\n", mat[curRow][curCol], curRow, curCol);
             curCol++;
             mat[curRow] = realloc(mat[curRow], sizeof(double) * (curCol+1));
             data += offset;
@@ -157,13 +157,9 @@ int main(int argc, char** argv){
 	readKeys(KEY_FILE, keyDatabase);
 
 	// Allocate memory for database
-	double **dataMatrix = (double**)malloc(ROWS*sizeof(double*));
-	for(int r = 0; r < ROWS; ++r){
-		dataMatrix[r] = (double*)malloc(COLS*sizeof(double));
-	}
+	double **dataMatrix = (double**)malloc(1*sizeof(double*));
 
     //Read in matrix, and record number of rows and columns in ROWS and COLS
-	//readData(DATA_FILE, dataMatrix);
     dataMatrix = readMatrix(DATA_FILE, dataMatrix);
     
     //Free all dynamically allocated data
