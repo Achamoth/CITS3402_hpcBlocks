@@ -11,20 +11,6 @@
 #include <math.h>
 
 //------------------------------------------------------------------
-// Package accessible functions
-//------------------------------------------------------------------
-//extern void readData(char*, double**);
-extern void readKeys(char*, long long*);
-//------------------------------------------------------------------
-// Package accessible variables and definitions
-//------------------------------------------------------------------
-#define DATA_FILE "data.txt"
-#define KEY_FILE "keys.txt"
-extern const char* programName;
-int ROWS = 4400;
-int COLS = 500;
-double DIA = 0.000001;
-//------------------------------------------------------------------
 // Struct declaration for blocks
 //------------------------------------------------------------------
 typedef struct Block {
@@ -32,3 +18,24 @@ typedef struct Block {
     double sumOfElements;
     int column;
 } Block;
+//------------------------------------------------------------------
+// Package accessible functions
+//------------------------------------------------------------------
+extern void readData(char*, double**);
+extern void readKeys(char*, long long*);
+extern double **readMatrix(char*, double**);
+extern void freeData(double**, long long*);
+extern void freeBD(Block**, int);
+extern Block **findBlocks(Block**, double**, long long*, int*);
+
+//------------------------------------------------------------------
+// Package accessible variables and definitions
+//------------------------------------------------------------------
+#define DATA_FILE "data.txt"
+#define KEY_FILE "keys.txt"
+#define DIA 0.000001
+extern const char* programName;
+extern int allRows;
+extern int allCols;
+//int ROWS = 4400;
+//int COLS = 500;
