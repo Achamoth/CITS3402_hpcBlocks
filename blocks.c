@@ -265,10 +265,11 @@ Collision **findCollisions(Block **blockDB, int numBlocks, int *numberCollisions
     //Loop over all blocks
     for(int i=0; i<numBlocks; i++) {
         Block *curBlock = blockDB[i];
-        int curSig = curBlock->signature;
+        long long curSig = curBlock->signature;
         int curCollisions = 0;
+        printf("cur block index = %d\n", i);
         //Start inner loop to compare to all other blocks
-        for(int j=i+1; i<numBlocks; j++) {
+        for(int j=i+1; j<numBlocks; j++) {
             Block *compBlock = blockDB[j];
             //Ensure that blocks are not in same column
             if(curBlock->column == compBlock->column) {
@@ -285,14 +286,14 @@ Collision **findCollisions(Block **blockDB, int numBlocks, int *numberCollisions
                 collisions[numCollisions]->collidingBlocks[curCollisions] = (Block *) malloc(sizeof(Block));
                 collisions[numCollisions]->collidingBlocks[curCollisions] = compBlock;
                 collisions[numCollisions]->numBlocksInCollision += 1;
-                numCollisions++;
                 curCollisions++;
-                
+                numCollisions++;
                 //Allocate more memory for collision database
                 collisions = (Collision **) realloc(collisions, (numCollisions+1)*sizeof(Collision *));
                 
                 //TEST OUTPUT
-                printf("Found collision at block %d and %d. Sigs are: %d and %lld\n", i, j, curSig, compBlock->signature);
+                printf("Found collision at block %d and %d. Sigs are: %lld and %lld\n", i, j, curSig, compBlock->signature);
+                
             }
         }
     }
@@ -322,15 +323,15 @@ int main(int argc, char** argv){
     blockDatabase = findBlocks(blockDatabase, dataMatrix, keyDatabase, &numBlocks);
     
     //Find all collisions among blocks
-    //int numCollisions = 0;
-    //Collision **collisions = findCollisions(blockDatabase, numBlocks, &numCollisions);
+    int numCollisions = 0;
+    Collision **collisions = findCollisions(blockDatabase, numBlocks, &numCollisions);
     
     //Free all dynamically allocated memory for key and matrix databases
     freeData(dataMatrix, keyDatabase);
     //Free dynamically allocated memory for block database
     freeBD(blockDatabase, numBlocks);
     //Free dynamically allocated memory for collision database
-    //freeCollisionDB(collisions, numCollisions);
+    freeCollisionDB(collisions, numCollisions);
     //Exit program
 	return EXIT_SUCCESS;
 }
