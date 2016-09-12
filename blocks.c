@@ -172,12 +172,7 @@ void freeBD(Block **bd, int numBlocks) {
 void freeCollisionDB(Collision **cdb, int numCollisions) {
     //Free each collision
     for(int i=0; i<numCollisions; i++) {
-        //First, free each collision's block database
-        //THE ERROR MIGHT BE HERE
-        for(int j=0; j<cdb[i]->numBlocksInCollision; j++) {
-            printf("block %d being freed\n", j);
-            free(cdb[i]->collidingBlocks[j]);
-        }
+        //First, free each collision's block database (don't need to free individual blocks, as they're already freed in freeBD())
         free(cdb[i]->collidingBlocks);
         //Now, free collision
         free(cdb[i]);
@@ -217,7 +212,7 @@ double findSum(int r1, int r2, int r3, int r4, int col, double **mat) {
 Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks) {
     int nextBlock = 0;
     //Loop through matrix columns
-    for(int col=0; col<COLS; col++) {
+    for(int col=0; col<COLS/5; col++) {
         //Loop through matrix rows
         for(int row1=0; row1<ROWS; row1++) {
             for(int row2=row1+1; row2<ROWS; row2++) {
@@ -262,7 +257,7 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
 Collision **findCollisions(Block **blockDB, int numBlocks, int *numberCollisionsFound) {
     //Set up collision database
     int numCollisions = 0;
-    Collision **collisions = (Collision **) malloc((numCollisions+1) * sizeof(Collision *));
+    Collision **collisions = (Collision **) malloc((numCollisions+1) * sizeof(Collision));
     //Allocate memory for first entry of collision database
     collisions[0] = (Collision *) malloc(sizeof(Collision));
     
@@ -279,7 +274,6 @@ Collision **findCollisions(Block **blockDB, int numBlocks, int *numberCollisions
                 continue;
             }
             //Check for collision
-            //THE ERROR MIGHT BE HERE
             if(compBlock->signature == curSig) {
                 //Add block to current collision
                 if(curCollisions == 0) {
@@ -291,7 +285,6 @@ Collision **findCollisions(Block **blockDB, int numBlocks, int *numberCollisions
                     collisions = (Collision **) realloc(collisions, (numCollisions+1)*sizeof(Collision *));
                 }
                 printf("%d %d\n", numCollisions-1, curCollisions);
-                collisions[numCollisions-1]->collidingBlocks[curCollisions] = (Block *) malloc(sizeof(Block));
                 collisions[numCollisions-1]->collidingBlocks[curCollisions] = compBlock;
                 collisions[numCollisions-1]->numBlocksInCollision += 1;
                 curCollisions++;
