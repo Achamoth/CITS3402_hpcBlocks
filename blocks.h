@@ -18,15 +18,26 @@ typedef struct Block {
     double sumOfElements;
     int column;
 } Block;
+
+//------------------------------------------------------------------
+// Struct declaration for collisions
+//------------------------------------------------------------------
+typedef struct Collision {
+    Block **collidingBlocks;
+    int numBlocksInCollision;
+} Collision;
+
 //------------------------------------------------------------------
 // Package accessible functions
 //------------------------------------------------------------------
-extern void readData(char*, double**);
-extern void readKeys(char*, long long*);
-extern double **readMatrix(char*, double**);
-extern void freeData(double**, long long*);
-extern void freeBD(Block**, int);
-extern Block **findBlocks(Block**, double**, long long*, int*);
+extern void readData(char *, double **);
+extern void readKeys(char *, long long *);
+extern double **readMatrix(char *, double **);
+extern void freeData(double **, long long *);
+extern void freeBD(Block **, int);
+extern void freeCollisionDB(Collision **, int);
+extern Block **findBlocks(Block **, double **, long long *, int *);
+extern Collision **findCollisions(Block **, int, int *);
 
 //------------------------------------------------------------------
 // Package accessible variables and definitions
@@ -35,7 +46,5 @@ extern Block **findBlocks(Block**, double**, long long*, int*);
 #define KEY_FILE "keys.txt"
 #define DIA 0.000001
 extern const char* programName;
-extern int allRows;
-extern int allCols;
-//int ROWS = 4400;
-//int COLS = 500;
+extern int ROWS;
+extern int COLS;

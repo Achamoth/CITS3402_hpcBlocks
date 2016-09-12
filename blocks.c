@@ -14,14 +14,13 @@ int main(int argc, char** argv){
     
     //Allocate memory for matrix database
 	double **dataMatrix = (double**)malloc(1*sizeof(double*));
-    //Read in matrix, and record number of allRows and columns in allRows and allCols
+    //Read in matrix, and record number of rows and columns in ROWS and COLS
     dataMatrix = readMatrix(DATA_FILE, dataMatrix);
-
-	// Allocate memory for keys
-	long long *keyDatabase = malloc(allRows*sizeof(long long));
+    
+    // Allocate memory for keys
+	long long *keyDatabase = malloc(ROWS*sizeof(long long));
 	// Read in keys
 	readKeys(KEY_FILE, keyDatabase);
-    
     
     //Create pool of blocks
     Block **blockDatabase = malloc(1*sizeof(Block *));;
@@ -30,10 +29,16 @@ int main(int argc, char** argv){
     int numBlocks = 0;
     blockDatabase = findBlocks(blockDatabase, dataMatrix, keyDatabase, &numBlocks);
     
+    //Find all collisions among blocks
+    int numCollisions = 0;
+    Collision **collisions = findCollisions(blockDatabase, numBlocks, &numCollisions);
+    
     //Free all dynamically allocated memory for key and matrix databases
     freeData(dataMatrix, keyDatabase);
     //Free dynamically allocated memory for block database
     freeBD(blockDatabase, numBlocks);
+    //Free dynamically allocated memory for collision database
+    freeCollisionDB(collisions, numCollisions);
     //Exit program
 	return EXIT_SUCCESS;
 }

@@ -6,14 +6,14 @@
 */
 #include "blocks.h"
 
-int allRows;
-int allCols;
+int ROWS;
+int COLS;
     
 /*
 	readData
 
 	input char pointer to file containing comma separated floating point numbers
-	Reads data from data.txt into 2d array of doubles allRows x allCols in size
+	Reads data from data.txt into 2d array of doubles ROWS x COLS in size
 */
 void readData(char *filename, double **dataMatrix){
 	FILE *dataFile = fopen(filename, "r");
@@ -26,8 +26,8 @@ void readData(char *filename, double **dataMatrix){
 		exit(EXIT_FAILURE);
 	}
 
-	for(int r = 0; r < allRows; ++r){
-		for(int c = 0; c < allCols; ++c){
+	for(int r = 0; r < ROWS; ++r){
+		for(int c = 0; c < COLS; ++c){
 			//  Use fscanf to skip the comma characters
 			fscanf(dataFile, "%lf%*c", &dataMatrix[r][c]);
             //TEST OUTPUT
@@ -59,7 +59,7 @@ double **readMatrix(char *filename, double **mat) {
         exit(EXIT_FAILURE);
     }
     
-    //Count number of allRows and columns in matrix
+    //Count number of rows and columns in matrix
     int curRow = 0;
     int curCol = 0;
     
@@ -93,9 +93,9 @@ double **readMatrix(char *filename, double **mat) {
         curRow++;
     }
     
-    //Calculate number of allRows and allCols
-    allRows = curRow;
-    allCols = curCol;
+    //Calculate number of rows and columns
+    ROWS = curRow;
+    COLS = curCol;
     
     //Return matrix
     return mat;
@@ -119,7 +119,7 @@ void readKeys(char *filename, long long *keyDatabase){
 	}
 
 	//	Read keys, separeted by whitespace
-	for(int k = 0; k < allRows; ++k){
+	for(int k = 0; k < ROWS; ++k){
 		fscanf(dataFile, "%lld", &keyDatabase[k]);
 	}
 
@@ -131,13 +131,13 @@ void readKeys(char *filename, long long *keyDatabase){
 
 /*
     freeData
-    
+ 
     input dynamically allocated matrix and keyDatabase
     Frees dynamically allocated memory
 */
 void freeData(double **mat, long long *keys) {
-    //Free all allRows of matrix
-    for(int i=0; i<allRows; i++) {
+    //Free all rows of matrix
+    for(int i=0; i<ROWS; i++) {
         free(mat[i]);
     }
     //Free matrix
@@ -145,4 +145,37 @@ void freeData(double **mat, long long *keys) {
     
     //Free key database
     free(keys);
+}
+
+/*
+ freeBD
+ 
+ input blockDatabase: dynamically allocated database of Blocks
+ Frees memory allocated to block database
+ 
+ */
+void freeBD(Block **bd, int numBlocks) {
+    //Loop through all blocks
+    for(int i=0; i<numBlocks; i++) {
+        free(bd[i]);
+    }
+    free(bd);
+}
+
+/*
+ freeCollisionDB
+ 
+ input collision database and number of collisions
+ Frees all memory allocated for collision database, and individual collisions
+ */
+void freeCollisionDB(Collision **cdb, int numCollisions) {
+    //Free each collision
+    for(int i=0; i<numCollisions; i++) {
+        //First, free each collision's block database (don't need to free individual blocks, as they're already freed in freeBD())
+        free(cdb[i]->collidingBlocks);
+        //Now, free collision
+        free(cdb[i]);
+    }
+    //Now, free database memory
+    free(cdb);
 }
