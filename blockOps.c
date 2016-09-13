@@ -18,17 +18,6 @@ long long findSig(int r1, int r2, int r3, int r4, long long *kd) {
 }
 
 /*
-    findSum
- 
-    input matrixDatabase and four row numbers, and a column number
-    Finds sum of four elements at specified row and column number
-*/
-double findSum(int r1, int r2, int r3, int r4, int col, double **mat) {
-    double sum = mat[r1][col] + mat[r2][col] + mat[r3][col] + mat[r4][col];
-    return sum;
-}
-
-/*
     mergeBlockDatabases
     
     input partial block database and complete block database
@@ -53,7 +42,7 @@ Block **mergeBlockDatabases(Block **completeDB, Block **partialDB, int numBlockI
 Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks) {
     int nextBlock = 0;
     //Loop through matrix columns
-    for(int col=0; col<COLS; col++) {
+    for(int col=0; col<COLS-1; col++) {
         //Loop through matrix rows in parallel
         omp_set_num_threads(4);
         #pragma omp parallel
@@ -76,7 +65,6 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
                             partialBlockDB = (Block **) realloc(partialBlockDB, (localNextBlock+1)*sizeof(Block *));
                             partialBlockDB[localNextBlock] = (Block *) malloc(sizeof(Block));
                             partialBlockDB[localNextBlock]->signature = findSig(row1, row2, row3, row4, kd);
-                            partialBlockDB[localNextBlock]->sumOfElements = findSum(row1, row2, row3, row4, col, mat);
                             partialBlockDB[localNextBlock]->column = col;
                             localNextBlock++;
                             //TEST OUTPUT

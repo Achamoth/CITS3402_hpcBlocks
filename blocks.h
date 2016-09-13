@@ -16,7 +16,6 @@
 //------------------------------------------------------------------
 typedef struct Block {
     long long signature;
-    double sumOfElements;
     int column;
 } Block;
 
