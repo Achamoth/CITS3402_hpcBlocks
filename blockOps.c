@@ -1,28 +1,28 @@
 /*
-    CITS3402 Project 1 2016
-    Name:           Ammar Abu Shamleh, Pradyumn Vij 
-    Student number: 21521274, 21469477
-    Date:           September 2016
-*/
+ CITS3402 Project 1 2016
+ Name:           Ammar Abu Shamleh, Pradyumn Vij
+ Student number: 21521274, 21469477
+ Date:           September 2016
+ */
 #include "blocks.h"
 
 /*
-    findSig
+ findSig
  
-    input key database, and four row numbers
-    Finds sum of signatures at specified row numbers
-*/
+ input key database, and four row numbers
+ Finds sum of signatures at specified row numbers
+ */
 long long findSig(int r1, int r2, int r3, int r4, long long *kd) {
     long long sum = kd[r1]+kd[r2]+kd[r3]+kd[r4];
     return sum;
 }
 
 /*
-    mergeBlockDatabases
-    
-    input partial block database and complete block database
-    Copies all data (actually copies pointers) from partial block database to complete database
-*/
+ mergeBlockDatabases
+ 
+ input partial block database and complete block database
+ Copies all data (actually copies pointers) from partial block database to complete database
+ */
 Block **mergeBlockDatabases(Block **completeDB, Block **partialDB, int numBlockInPartial, int *numCopiedToComplete) {
     //Reallocate more memory for complete database
     completeDB = (Block **) realloc(completeDB, sizeof(Block *) * (*numCopiedToComplete+numBlockInPartial));
@@ -34,17 +34,17 @@ Block **mergeBlockDatabases(Block **completeDB, Block **partialDB, int numBlockI
 }
 
 /*
-    findBlocks
+ findBlocks
  
-    input blockDatabase and matrixDatabase
-    Finds all blocks in matrixDatabase and stores them in blockDatabase
-*/
+ input blockDatabase and matrixDatabase
+ Finds all blocks in matrixDatabase and stores them in blockDatabase
+ */
 Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks) {
     int nextBlock = 0;
-    //Loop through matrix columns
+    //Loop through matrix columns (excluding last column)
     for(int col=0; col<COLS-1; col++) {
         //Loop through matrix rows in parallel
-        omp_set_num_threads(4);
+        omp_set_num_threads(NUM_THREADS);
         #pragma omp parallel
         {
             Block **partialBlockDB = (Block **) malloc(1 * sizeof(Block *));
@@ -80,16 +80,62 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
             }
         }
     }
+    
+    //Find all blocks in last column using parallel tasks
+    int col = 499;
+    #pragma omp parallel
+    {
+        //Have a thread generate tasks to split block generation of last column up
+        #pragma omp single
+        {
+            int numThreads = omp_get_num_threads();
+            int increment = ROWS/numThreads;
+            int init = 0;
+            int final = init+increment;
+            printf("%d %d\n",init, final);
+            while(final < ROWS) {
+                #pragma omp task
+                {
+                    //Generate a task for each chunk of the column that finds all the blocks in that chunk
+                    int ID = omp_get_thread_num();
+                    for(int r1=init; r1<final; r1++) {
+                        for(int r2=r1+1; r2<final; r2++) {
+                            //Check if they're in the same neighbourhood
+                            if(fabs(mat[r1][col] - mat[r2][col]) > DIA) continue;
+                            for(int r3 = r2+1; r3<ROWS; r3++) {
+                                //Check if they're in the same neighbourhood
+                                if(fabs(mat[r1][col]-mat[r3][col])>DIA || fabs(mat[r2][col]-mat[r3][col])>DIA) continue;
+                                for(int r4=r3+1; r4<ROWS; r4++) {
+                                    //Check they're in the same neighbourhood
+                                    if(fabs(mat[r4][col]-mat[r1][col])>DIA || fabs(mat[r4][col]-mat[r2][col])>DIA || fabs(mat[r4][col]-mat[r1][col])>DIA) continue;
+                                    //We have found a block, and must store it in the block database
+                                    //TODO: STORE BLOCK IN DATABASE
+                                    
+                                    //TEST OUTPUT
+                                    printf("Thread %d: Found block at column %d on rows %d, %d, %d, %d\n", ID, col, r1, r2, r3, r4);
+                                }
+                            }
+                        }
+                    }
+                }
+                //Calculate next chunk size and starting and ending index values
+                final += increment;
+                init += increment;
+                if(final > ROWS) final = ROWS;
+            }
+        }
+    }
+    
     *numBlocks = nextBlock;
     return blockDB;
 }
 
 /*
-    findCollisions
+ findCollisions
  
-    input blockDatabase
-    Finds all collisions between generated blocks and return collision database; also store number of collisions found
-*/
+ input blockDatabase
+ Finds all collisions between generated blocks and return collision database; also store number of collisions found
+ */
 Collision **findCollisions(Block **blockDB, int numBlocks, int *numberCollisionsFound) {
     //Set up collision database
     int numCollisions = 0;
