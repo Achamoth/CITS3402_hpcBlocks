@@ -20,12 +20,28 @@ long long findSig(int r1, int r2, int r3, int r4, long long *kd) {
 /*
     findSum
  
-    inpput matrixDatabase and four row numbers, and a column number
+    input matrixDatabase and four row numbers, and a column number
     Finds sum of four elements at specified row and column number
 */
 double findSum(int r1, int r2, int r3, int r4, int col, double **mat) {
     double sum = mat[r1][col] + mat[r2][col] + mat[r3][col] + mat[r4][col];
     return sum;
+}
+
+/*
+    mergeBlockDatabases
+    
+    input partial block database and complete block database
+    Copies all data (actually copies pointers) from partial block database to complete database
+*/
+Block **mergeBlockDatabases(Block **completeDB, Block **partialDB, int numBlockInPartial, int *numCopiedToComplete) {
+    //Reallocate more memory for complete database
+    completeDB = (Block **) realloc(completeDB, sizeof(Block *) * (*numCopiedToComplete+numBlockInPartial));
+    for(int i=0; i<numBlockInPartial; i++) {
+        completeDB[i + *numCopiedToComplete] = partialDB[i];
+    }
+    *numCopiedToComplete += numBlockInPartial;
+    return completeDB;
 }
 
 /*
@@ -38,34 +54,45 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
     int nextBlock = 0;
     //Loop through matrix columns
     for(int col=0; col<COLS; col++) {
-        //Loop through matrix rows
-        for(int row1=0; row1<ROWS; row1++) {
-            for(int row2=row1+1; row2<ROWS; row2++) {
-                //Ensure row1 and row2 are unique
-                if(row2 == row1) continue;
-                //Check if they're in the same neighbourhood
-                if(fabs(mat[row1][col] - mat[row2][col])>DIA) continue;
-                for(int row3=row2+1; row3<ROWS; row3++) {
-                    //Ensure rows 1, 2 and 3 are unique
-                    if(row3 == row2 || row3 == row1) continue;
-                    //Check they're in the same neighbourhood
-                    if(fabs(mat[row3][col]-mat[row2][col])>DIA || fabs(mat[row3][col]-mat[row1][col])>DIA) continue;
-                    for(int row4=row3+1; row4<ROWS; row4++) {
-                        //Ensure all rows are unique
-                        if(row4==row1 || row4==row2 || row4==row3) continue;
+        //Loop through matrix rows in parallel
+        #pragma omp parallel
+        {
+            Block **partialBlockDB = (Block **) malloc(1 * sizeof(Block *));
+            int localNextBlock = 0; //Thread private counter for next index into block database
+            #pragma omp for
+            for(int row1=0; row1<ROWS; row1++) {
+                for(int row2=row1+1; row2<ROWS; row2++) {
+                    //Ensure row1 and row2 are unique
+                    if(row2 == row1) continue;
+                    //Check if they're in the same neighbourhood
+                    if(fabs(mat[row1][col] - mat[row2][col])>DIA) continue;
+                    for(int row3=row2+1; row3<ROWS; row3++) {
+                        //Ensure rows 1, 2 and 3 are unique
+                        if(row3 == row2 || row3 == row1) continue;
                         //Check they're in the same neighbourhood
-                        if(fabs(mat[row4][col]-mat[row1][col])>DIA || fabs(mat[row4][col]-mat[row2][col])>DIA || fabs(mat[row4][col]-mat[row3][col])>DIA) continue;
-                        //We have found a block, and must store it in the block database
-                        blockDB = (Block **) realloc(blockDB, (nextBlock+1)*sizeof(Block*));
-                        blockDB[nextBlock] = (Block *) malloc(sizeof(Block));
-                        blockDB[nextBlock]->signature = findSig(row1, row2, row3, row4, kd);
-                        blockDB[nextBlock]->sumOfElements = findSum(row1, row2, row3, row4, col, mat);
-                        blockDB[nextBlock]->column = col;
-                        nextBlock++;
-                        //TEST OUTPUT
-                        printf("Found block at column %d on rows %d, %d, %d, %d\n", col, row1, row2, row3, row4);
+                        if(fabs(mat[row3][col]-mat[row2][col])>DIA || fabs(mat[row3][col]-mat[row1][col])>DIA) continue;
+                        for(int row4=row3+1; row4<ROWS; row4++) {
+                            //Ensure all rows are unique
+                            if(row4==row1 || row4==row2 || row4==row3) continue;
+                            //Check they're in the same neighbourhood
+                            if(fabs(mat[row4][col]-mat[row1][col])>DIA || fabs(mat[row4][col]-mat[row2][col])>DIA || fabs(mat[row4][col]-mat[row3][col])>DIA) continue;
+                            //We have found a block, and must store it in the block database
+                            partialBlockDB = (Block **) realloc(partialBlockDB, (localNextBlock+1)*sizeof(Block *));
+                            partialBlockDB[localNextBlock] = (Block *) malloc(sizeof(Block));
+                            partialBlockDB[localNextBlock]->signature = findSig(row1, row2, row3, row4, kd);
+                            partialBlockDB[localNextBlock]->sumOfElements = findSum(row1, row2, row3, row4, col, mat);
+                            partialBlockDB[localNextBlock]->column = col;
+                            localNextBlock++;
+                            //TEST OUTPUT
+                            printf("Found block at column %d on rows %d, %d, %d, %d\n", col, row1, row2, row3, row4);
+                        }
                     }
                 }
+            }
+            //Merge partial block database with complete block database
+            #pragma omp critical
+            {
+                blockDB = mergeBlockDatabases(blockDB, partialBlockDB, localNextBlock, &nextBlock);
             }
         }
     }
@@ -82,7 +109,7 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
 Collision **findCollisions(Block **blockDB, int numBlocks, int *numberCollisionsFound) {
     //Set up collision database
     int numCollisions = 0;
-    Collision **collisions = (Collision **) malloc((numCollisions+1) * sizeof(Collision));
+    Collision **collisions = (Collision **) malloc((numCollisions+1) * sizeof(Collision *));
     //Allocate memory for first entry of collision database
     collisions[0] = (Collision *) malloc(sizeof(Collision));
     //Record whether or not block has already been detected in a collision

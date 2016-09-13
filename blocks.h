@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
+#include <omp.h>
 
 //------------------------------------------------------------------
 // Struct declaration for blocks
