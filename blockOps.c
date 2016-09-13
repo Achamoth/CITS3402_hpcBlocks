@@ -55,12 +55,14 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
     //Loop through matrix columns
     for(int col=0; col<COLS; col++) {
         //Loop through matrix rows in parallel
+        omp_set_num_threads(4);
         #pragma omp parallel
         {
             Block **partialBlockDB = (Block **) malloc(1 * sizeof(Block *));
             int localNextBlock = 0; //Thread private counter for next index into block database
-            #pragma omp for
-            for(int row1=0; row1<ROWS; row1++) {
+            int ID = omp_get_thread_num();
+            int numThreads = omp_get_num_threads();
+            for(int row1=ID; row1<ROWS; row1+=numThreads) {
                 for(int row2=row1+1; row2<ROWS; row2++) {
                     //Ensure row1 and row2 are unique
                     if(row2 == row1) continue;
@@ -84,7 +86,7 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
                             partialBlockDB[localNextBlock]->column = col;
                             localNextBlock++;
                             //TEST OUTPUT
-                            printf("Found block at column %d on rows %d, %d, %d, %d\n", col, row1, row2, row3, row4);
+                            printf("Thread %d: Found block at column %d on rows %d, %d, %d, %d\n", ID, col, row1, row2, row3, row4);
                         }
                     }
                 }
