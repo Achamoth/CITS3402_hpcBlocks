@@ -92,11 +92,14 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
             int increment = ROWS/numThreads;
             int init = 0;
             int final = init+increment;
-            printf("%d %d\n",init, final);
             while(final < ROWS) {
+                //Generate a task for each chunk of the column that finds all the blocks in that chunk
                 #pragma omp task
                 {
-                    //Generate a task for each chunk of the column that finds all the blocks in that chunk
+                    //Private thread variables
+                    Block **partialBlockDB = (Block **) malloc(1 * sizeof(Block *));
+                    int localNextBlock = 0;
+                    //Thread number
                     int ID = omp_get_thread_num();
                     for(int r1=init; r1<final; r1++) {
                         for(int r2=r1+1; r2<final; r2++) {
@@ -109,13 +112,22 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
                                     //Check they're in the same neighbourhood
                                     if(fabs(mat[r4][col]-mat[r1][col])>DIA || fabs(mat[r4][col]-mat[r2][col])>DIA || fabs(mat[r4][col]-mat[r1][col])>DIA) continue;
                                     //We have found a block, and must store it in the block database
-                                    //TODO: STORE BLOCK IN DATABASE
+                                    partialBlockDB = (Block **) realloc(partialBlockDB, (localNextBlock+1) * sizeof(Block *));
+                                    partialBlockDB[localNextBlock] = (Block *) malloc(sizeof(Block));
+                                    partialBlockDB[localNextBlock]->signature = findSig(r1, r2, r3, r4, kd);
+                                    partialBlockDB[localNextBlock]->column = col;
+                                    localNextBlock++;
                                     
                                     //TEST OUTPUT
                                     printf("Thread %d: Found block at column %d on rows %d, %d, %d, %d\n", ID, col, r1, r2, r3, r4);
                                 }
                             }
                         }
+                    }
+                    //Add partial block database to complete block database
+                    #pragma omp critical
+                    {
+                        blockDB = mergeBlockDatabases(blockDB, partialBlockDB, localNextBlock, &nextBlock);
                     }
                 }
                 //Calculate next chunk size and starting and ending index values
@@ -127,6 +139,7 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
     }
     
     *numBlocks = nextBlock;
+    printf("%d\n", *numBlocks);
     return blockDB;
 }
 
