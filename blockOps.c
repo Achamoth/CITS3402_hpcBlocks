@@ -64,18 +64,12 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
             int numThreads = omp_get_num_threads();
             for(int row1=ID; row1<ROWS; row1+=numThreads) {
                 for(int row2=row1+1; row2<ROWS; row2++) {
-                    //Ensure row1 and row2 are unique
-                    if(row2 == row1) continue;
                     //Check if they're in the same neighbourhood
                     if(fabs(mat[row1][col] - mat[row2][col])>DIA) continue;
                     for(int row3=row2+1; row3<ROWS; row3++) {
-                        //Ensure rows 1, 2 and 3 are unique
-                        if(row3 == row2 || row3 == row1) continue;
                         //Check they're in the same neighbourhood
                         if(fabs(mat[row3][col]-mat[row2][col])>DIA || fabs(mat[row3][col]-mat[row1][col])>DIA) continue;
                         for(int row4=row3+1; row4<ROWS; row4++) {
-                            //Ensure all rows are unique
-                            if(row4==row1 || row4==row2 || row4==row3) continue;
                             //Check they're in the same neighbourhood
                             if(fabs(mat[row4][col]-mat[row1][col])>DIA || fabs(mat[row4][col]-mat[row2][col])>DIA || fabs(mat[row4][col]-mat[row3][col])>DIA) continue;
                             //We have found a block, and must store it in the block database
