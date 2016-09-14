@@ -1,0 +1,42 @@
+<h1>Notes about approach (for report):</h1>
+
+<h2>Block generation</h2>
+
+<h3>Sequential approach</h3>
+<p>
+<ul>
+<li>Approached project by first designing working naive solution (before thinking about sequential optimisation at all)</li>
+
+<li>-As blocks are generated, they are added to a growing pool of blocks (dyanmically reallocated to fit the new blocks), which is later used in collision detection</li>
+
+<li>Blocks are represented using a struct, which simply stores the signature of the block and the column in which it was found</li>
+</ul>
+</p>
+
+<h3>Some thoughts on parallelisation that came up: </h3>
+<p>
+<ul>
+<li>Naive solution finds blocks with nested for loop (outer loop, 3 inner loops O(n^4) for each column). The solution loops over all the columns, and executes the four inner loops to find all blocks. Thus each column is independent of one another</li>
+
+<li>Given that columns are independent, I initially thought of generating a task for each column, however, this proved to be an inefficient methodology once I discovered that most blocks lay in the last (500th) column. So splitting work by column would not have been efficient</li>
+</ul>
+</p>
+
+<h3> First attempt at parallelisation: Parallelising within columns</h3>
+<p>
+<ul>
+<li>Next attempt at parallelisation was to use omp pragmas to parallelise the outermost for loop of each column. i.e. within each column, split the block generating work up among each thread by giving each thread a chunk of rows to analyse. Since the work at each row is independent, this didn't hamper correctness, however, there were a few issues</li>
+
+<li>This approach was taken to counter the aforementioned issue of most blocks residing in the last column. If parallelisation distributes work within each column (rather than distributing by columns), then the last column can still be distributed among the thread pool</li>
+
+<li>An immediate issue with this approach is that the parallel region begins and ends within each column's individual iteration. This means that <i>#pragma omp parallel</i>, and the barrier at the end of the parallel region, are encountered once per column (so 500 times for this data set). Since spawning new threads incurs overhead, this is quite an inefficient way to parallelise</li>
+
+<li>The second issue is that each thread must maintain its own private database of blocks to which it updates (so as to avoid incoherency in the data by writing to shared database). This means that these partial databases must be merged with the complete database at the end of each thread's work on a column. This requires a critical region (which is very damaging to performance) to ensure the data in the collective database is coherent. Since this critical region is encountered once per thread per column, it is certainly going to be a bottleneck in performance. Overall, it would be encountered 4 times per column (assuming 4 threads) and thus 2000 times during overall block generation process</li>
+
+<li>Despite these inefficiencies, the parallelisation was still effective in improving performance. For the first 499 columns, it achieved a speed up of ~2.2 (~37 seconds for sequential, ~17 seconds for parallel). However, the parallel code's performance took a drastic hit at the last column, and was rapidly overtaken by the sequential code.</li>
+
+<li>Believing the issue to be cache issue, I attempted to resolve it by performing the parallelisation of the for loops manually. Instead of using <i>#pragma omp for</i>, I instead had each thread acquire its thread ID number, and the number of threads, at the beginning of the parallel region. I used <i>omp_get_thread_num()</i> and <i>omp_get_num_threads()</i> to achieve this. I then had each thread proceed through the for loop according to index numbers calculated using the aforementioned <i>thread number</i> and <i>number of threads</i>. Each thread started with an index equal to its <i>thread number</i>, and instead of incrementing by 1 on each iteration, it incremented by <i>number of threads</i>. So with 2 threads, this would be akin to giving one thread all even numbers, and the other thread all odd numbers. I believed this would minimize the number of cache misses. However, so significant performance improvement was observed.</li>
+</ul>
+</p>
+
+<h3> Second attempt at parallelisation: Isolating last column and writing special case for it</h3>
