@@ -35,7 +35,7 @@ extern double **readMatrix(char *, double **);
 extern void freeData(double **, long long *);
 extern void freeBD(Block **, int);
 extern void freeCollisionDB(Collision **, int);
-extern Block **findBlocks(Block **, double **, long long *, int *);
+extern void findBlocks(Block **, double **, long long *, int *);
 extern Collision **findCollisions(Block **, int, int *);
 
 //------------------------------------------------------------------

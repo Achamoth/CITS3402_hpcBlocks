@@ -27,7 +27,7 @@ int main(int argc, char** argv){
     
     //Find all blocks in matrix
     int numBlocks = 0;
-    blockDatabase = findBlocks(blockDatabase, dataMatrix, keyDatabase, &numBlocks);
+    findBlocks(blockDatabase, dataMatrix, keyDatabase, &numBlocks);
     
     //Find all collisions among blocks
     int numCollisions = 0;

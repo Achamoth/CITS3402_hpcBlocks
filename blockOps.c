@@ -133,7 +133,7 @@ void generateBlocksBrute(double* array, Block** blockDB, long long* kd, int* col
     Finds all blocks in matrixDatabase and stores them in blockDatabase
 */
 
-Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks) {
+void findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks) {
     int nextBlock = 0;
     //Loop through matrix columns
     double* tempContainer = malloc(ROWS * sizeof(double));
@@ -148,8 +148,6 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
     // Free the utility container
     free(tempContainer);
     *numBlocks = nextBlock;
-    // Return all blocks for all columns found
-    return blockDB;
 }
 
 
