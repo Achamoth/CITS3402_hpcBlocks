@@ -33,7 +33,6 @@ void addBlock(Block** blockDB, int* blockIndex, long long* kd, int* col, int* ro
     Comparator function for qSort, to sort doubles in ascending order
 */
 int compareDoubles(const void* a, const void* b){
-    //return *(double*)a.value - *(double*)b.value;
     pair resA = *(pair*)a;
     pair resB = *(pair*)b;
     if(resA.value < resB.value) return -1;
@@ -55,6 +54,7 @@ void generateBlocksSlide(pair* array, Block** blockDB, long long* kd, int* col, 
     // sort the entire array in ascending order O(nlgn)
     qsort(array, ROWS, sizeof(pair), compareDoubles);
     // Upper bound incrementing is growing the size of the window, default start at 1
+    // Go out of bounds with inclusion of boundary ROWS
     for(int upper = 1; upper <= ROWS; ++upper){
         // Check if window contains elements in the same neighbourhood.
         // If not move the lower bound up till it does or until upper == lower
@@ -69,7 +69,11 @@ void generateBlocksSlide(pair* array, Block** blockDB, long long* kd, int* col, 
                     //  Increase memory for the new block pointer to the database
                     blockDB = (Block **) realloc(blockDB, (*blockIndex+1)*sizeof(Block*));
                     addBlock(blockDB, blockIndex, kd, col, &array[i].index, &array[j].index, &array[k].index, &array[upper-1].index);
+                    
+                    // Uncomment to print all rows / indexes being found
                     printf("Found block at column %d on rows %d, %d, %d, %d\n", *col, array[i].index, array[j].index, array[k].index, array[upper-1].index);
+                    
+
                     //  Increment number of blocks
                     (*blockIndex)++;
                 }
@@ -113,7 +117,7 @@ void generateBlocksBrute(double* array, Block** blockDB, long long* kd, int* col
                     // Increment blockIndex;
                     (*blockIndex)++;
                     //TEST OUTPUT
-                    printf("Found block at column %d on rows %d, %d, %d, %d\n", *col, row1, row2, row3, row4);
+                    //printf("Found block at column %d on rows %d, %d, %d, %d\n", *col, row1, row2, row3, row4);
                 }
             }
         }

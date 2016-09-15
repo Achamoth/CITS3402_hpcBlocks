@@ -26,8 +26,14 @@ int main(int argc, char** argv){
     Block **blockDatabase = malloc(1*sizeof(Block *));;
     
     //Find all blocks in matrix
+
     int numBlocks = 0;
+    clock_t start = clock();
     findBlocks(blockDatabase, dataMatrix, keyDatabase, &numBlocks);
+    clock_t end = clock();
+
+    printf("Number of blocks = %d", numBlocks);
+    printf("Execution completed in %ld seconds and %ld milliseconds", (end-start)/CLOCKS_PER_SEC, ((end-start)*1000/CLOCKS_PER_SEC)%1000);
     
     //Find all collisions among blocks
     int numCollisions = 0;
