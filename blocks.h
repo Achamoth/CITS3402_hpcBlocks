@@ -18,6 +18,11 @@ typedef struct Block {
     int column;
 } Block;
 
+typedef struct pair{
+	double value;
+	int index;
+} pair;
+
 //------------------------------------------------------------------
 // Struct declaration for collisions
 //------------------------------------------------------------------
