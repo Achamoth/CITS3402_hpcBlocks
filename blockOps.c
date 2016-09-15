@@ -1,6 +1,6 @@
 /*
     CITS3402 Project 1 2016
-    Name:           Ammar Abu Shamleh, Pradyumn Vij 
+    Name:           Ammar Abu Shamleh, Pradyumn Vij
     Student number: 21521274, 21469477
     Date:           September 2016
 */
@@ -69,17 +69,17 @@ void generateBlocksSlide(pair* array, Block** blockDB, long long* kd, int* col, 
                     //  Increase memory for the new block pointer to the database
                     blockDB = (Block **) realloc(blockDB, (*blockIndex+1)*sizeof(Block*));
                     addBlock(blockDB, blockIndex, kd, col, &array[i].index, &array[j].index, &array[k].index, &array[upper-1].index);
-                    
+
                     // Uncomment to print all rows / indexes being found
                     printf("Found block at column %d on rows %d, %d, %d, %d\n", *col, array[i].index, array[j].index, array[k].index, array[upper-1].index);
-                    
+
 
                     //  Increment number of blocks
                     (*blockIndex)++;
                 }
             }
         }
-    }    
+    }
 }
 
 
@@ -138,7 +138,7 @@ void findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks) {
         // Create an array of doubles
         for(int row = 0; row < ROWS; ++row){
             //tempContainer[row] = mat[row][col];
-            
+
             pairContainer[row].value = mat[row][col];
             pairContainer[row].index = row;
         }
@@ -167,7 +167,7 @@ Collision **findCollisions(Block **blockDB, int numBlocks, int *numberCollisions
     //Allocate memory for first entry of collision database
     collisions[0] = (Collision *) malloc(sizeof(Collision));
     //Record whether or not block has already been detected in a collision
-    bool *collided = malloc(sizeof(bool) * numBlocks);
+    bool* collided = malloc(sizeof(bool) * numBlocks);
     for(int i=0; i<numBlocks; i++) collided[i] = false;
     //Loop over all blocks
     for(int i=0; i<numBlocks; i++) {
@@ -200,7 +200,7 @@ Collision **findCollisions(Block **blockDB, int numBlocks, int *numberCollisions
                 collisions[numCollisions-1]->numBlocksInCollision += 1;
                 curCollisions++;
                 //Allocate more memory for current collision blocks
-                collisions[numCollisions-1]->collidingBlocks = (Block **) realloc(collisions[numCollisions-1]->collidingBlocks, ((curCollisions+1)*sizeof(Block *)));           
+                collisions[numCollisions-1]->collidingBlocks = (Block **) realloc(collisions[numCollisions-1]->collidingBlocks, ((curCollisions+1)*sizeof(Block *)));
                 //TEST OUTPUT
                 printf("Found collision at blocks %d and %d. Sigs are: %lld and %lld \n", i, j, curSig, collisions[numCollisions-1]->collidingBlocks[curCollisions-1]->signature);
             }
