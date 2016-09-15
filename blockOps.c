@@ -68,7 +68,7 @@ void generateBlocksSlide(double* array, Block** blockDB, long long* kd, int* col
                         blockDB = (Block **) realloc(blockDB, (*blockIndex+1)*sizeof(Block*));
                         addBlock(blockDB, blockIndex, kd, col, &lower, &i, &j, &k);
                         //  Increment number of blocks
-                        blockIndex++;
+                        (*blockIndex)++;
                     }
                 }
             }
@@ -89,6 +89,7 @@ void generateBlocksSlide(double* array, Block** blockDB, long long* kd, int* col
 */
 void generateBlocksBrute(double* array, Block** blockDB, long long* kd, int* col, int* blockIndex){
     //Loop through matrix rows
+    printf("blockIndex is = %d\n", *blockIndex);
     for(int row1=0; row1<ROWS; row1++) {
         for(int row2=row1+1; row2<ROWS; row2++) {
             //Ensure row1 and row2 are unique
@@ -110,7 +111,7 @@ void generateBlocksBrute(double* array, Block** blockDB, long long* kd, int* col
                     blockDB = (Block **) realloc(blockDB, (*blockIndex+1)*sizeof(Block*));
                     addBlock(blockDB, blockIndex, kd, col, &row1, &row2, &row3, &row4);
                     // Increment blockIndex;
-                    blockIndex++;
+                    (*blockIndex)++;
                     //TEST OUTPUT
                     printf("Found block at column %d on rows %d, %d, %d, %d\n", *col, row1, row2, row3, row4);
                 }
@@ -126,7 +127,6 @@ void generateBlocksBrute(double* array, Block** blockDB, long long* kd, int* col
 */
 
 void findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks) {
-    int nextBlock = 0;
     //Loop through matrix columns
     double* tempContainer = malloc(ROWS * sizeof(double));
     for(int col=0; col<COLS; col++) {
@@ -139,7 +139,6 @@ void findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks) {
     }
     // Free the utility container
     free(tempContainer);
-    *numBlocks = nextBlock;
 }
 
 
