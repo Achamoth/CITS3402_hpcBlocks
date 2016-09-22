@@ -29,10 +29,14 @@ typedef struct Collision {
 //------------------------------------------------------------------
 // Package accessible functions
 //------------------------------------------------------------------
-extern void readData(char *, double **);
-extern void readKeys(char *, long long *);
-extern double **readMatrix(char *, double **);
-extern void freeData(double **, long long *);
+extern FILE *openFile(char *);
+extern void closeFile(FILE *);
+extern void countKeys(FILE *);
+extern void readKeys(FILE *, long long *);
+extern void countRowsCols(FILE *);
+extern void readData(FILE *, double **);
+//extern double **readMatrix(char *, double **);
+//extern void freeData(double **, long long *);
 extern void freeBD(Block **, int);
 extern void freeCollisionDB(Collision **, int);
 extern void findBlocks(Block **, double **, long long *, int *);
