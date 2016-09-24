@@ -9,7 +9,7 @@ HEADERS = $(wildcard *.h)
 SOURCES = $(wildcard *.c)
 OBJECTS = $(wildcard *.o)
 
-CC = gcc-4.9
+CC = gcc-6
 CFLAGS = -std=c99 -Wall -pedantic -Werror -fopenmp
 
 $(EXEC): $(OBJECTS)

@@ -33,9 +33,11 @@ typedef struct Collision {
 extern void readData(char *, double **);
 extern void readKeys(char *, long long *);
 extern double **readMatrix(char *, double **);
-extern void freeData(double **, long long *);
+extern double **transposeMatrix(double **);
+extern void freeData(double **);
 extern void freeBD(Block **, int);
 extern void freeCollisionDB(Collision **, int);
+extern void freeTransposedData(double **);
 extern Block **findBlocks(Block **, double **, long long *, int *);
 extern Collision **findCollisions(Block **, int, int *);
 

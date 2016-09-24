@@ -54,13 +54,13 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
             for(int row1=ID; row1<ROWS; row1+=numThreads) {
                 for(int row2=row1+1; row2<ROWS; row2++) {
                     //Check if they're in the same neighbourhood
-                    if(fabs(mat[row1][col] - mat[row2][col])>DIA) continue;
+                    if(fabs(mat[col][row1] - mat[col][row2])>DIA) continue;
                     for(int row3=row2+1; row3<ROWS; row3++) {
                         //Check they're in the same neighbourhood
-                        if(fabs(mat[row3][col]-mat[row2][col])>DIA || fabs(mat[row3][col]-mat[row1][col])>DIA) continue;
+                        if(fabs(mat[col][row3]-mat[col][row2])>DIA || fabs(mat[col][row3]-mat[col][row1])>DIA) continue;
                         for(int row4=row3+1; row4<ROWS; row4++) {
                             //Check they're in the same neighbourhood
-                            if(fabs(mat[row4][col]-mat[row1][col])>DIA || fabs(mat[row4][col]-mat[row2][col])>DIA || fabs(mat[row4][col]-mat[row3][col])>DIA) continue;
+                            if(fabs(mat[col][row4]-mat[col][row1])>DIA || fabs(mat[col][row4]-mat[col][row2])>DIA || fabs(mat[col][row4]-mat[col][row3])>DIA) continue;
                             //We have found a block, and must store it in the block database
                             partialBlockDB = (Block **) realloc(partialBlockDB, (localNextBlock+1)*sizeof(Block *));
                             partialBlockDB[localNextBlock] = (Block *) malloc(sizeof(Block));
@@ -88,14 +88,13 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
         //Have a thread generate tasks to split block generation of last column up
         #pragma omp single
         {
-            int numThreads = omp_get_num_threads();
-            int increment = ceil((ROWS/numThreads));
+            //int numThreads = omp_get_num_threads();
+            //int increment = ceil((ROWS/numThreads));
+            int increment = 300;
             int init = 0;
             int final = init+increment;
             while(final < ROWS) {
                 //Generate a task for each chunk of the column that finds all the blocks in that chunk
-                //NEED TO RETHINK HOW THE ROWS ARE SPLIT; THE MAJORITY OF THE WORK IS DONE IN ROWS 0-1000, SO SPLITTING BY 1000'S (AS HAS BEEN DONE HERE) IS NOT AN EFFICIENT WAY TO DO THE
-                //ALSO, ROWS 2000-3000 HAVE ALMOST NO BLOCKS IN THEM, SO THREAD 3 FINISHES EARLY AND IS THEN INACTIVE. CONSIDER WRITING CUSTOM SPLIT CODE FOR EACH CHUNK OF ROWS THAT SUITS THE AMOUNT OF WORK IN THEM (IMPROVE BALANCE LOADING)
                 #pragma omp task firstprivate(init, final)
                 {
                     //Private thread variables
@@ -106,13 +105,13 @@ Block **findBlocks(Block **blockDB, double **mat, long long *kd, int *numBlocks)
                     for(int r1=init; r1<final; r1++) {
                         for(int r2=r1+1; r2<ROWS; r2++) {
                             //Check if they're in the same neighbourhood
-                            if(fabs(mat[r1][col] - mat[r2][col]) > DIA) continue;
+                            if(fabs(mat[col][r1] - mat[col][r2]) > DIA) continue;
                             for(int r3 = r2+1; r3<ROWS; r3++) {
                                 //Check if they're in the same neighbourhood
-                                if(fabs(mat[r1][col]-mat[r3][col])>DIA || fabs(mat[r2][col]-mat[r3][col])>DIA) continue;
+                                if(fabs(mat[col][r1]-mat[col][r3])>DIA || fabs(mat[col][r2]-mat[col][r3])>DIA) continue;
                                 for(int r4=r3+1; r4<ROWS; r4++) {
                                     //Check they're in the same neighbourhood
-                                    if(fabs(mat[r4][col]-mat[r1][col])>DIA || fabs(mat[r4][col]-mat[r2][col])>DIA || fabs(mat[r4][col]-mat[r3][col])>DIA) continue;
+                                    if(fabs(mat[col][r4]-mat[col][r1])>DIA || fabs(mat[col][r4]-mat[col][r2])>DIA || fabs(mat[col][r4]-mat[col][r4])>DIA) continue;
                                     //We have found a block, and must store it in the block database
                                     partialBlockDB = (Block **) realloc(partialBlockDB, (localNextBlock+1) * sizeof(Block *));
                                     partialBlockDB[localNextBlock] = (Block *) malloc(sizeof(Block));

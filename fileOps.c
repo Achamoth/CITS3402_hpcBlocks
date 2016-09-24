@@ -130,21 +130,57 @@ void readKeys(char *filename, long long *keyDatabase){
 }
 
 /*
+    transposeMatrix
+    
+    input data matrix
+    Tranposes data matrix
+*/
+double **transposeMatrix(double **dataMatrix) {
+    //Allocate memory for transposed matrix
+    double **transposed = (double **) malloc(sizeof(double *) * COLS);
+    for(int i=0; i<COLS; i++) {
+        transposed[i] = (double *) malloc(sizeof(double) * ROWS);
+    }
+    
+    //Store data in transposed matrix
+    for(int col=0; col<COLS; col++) {
+        for(int row=0; row<ROWS; row++) {
+            transposed[col][row] = dataMatrix[row][col];
+        }
+    }
+    
+    //Return pointer to transposed matrix
+    return transposed;
+}
+
+/*
     freeData
  
-    input dynamically allocated matrix and keyDatabase
+    input dynamically allocated matrix
     Frees dynamically allocated memory
 */
-void freeData(double **mat, long long *keys) {
+void freeData(double **mat) {
     //Free all rows of matrix
     for(int i=0; i<ROWS; i++) {
         free(mat[i]);
     }
     //Free matrix
     free(mat);
-    
-    //Free key database
-    free(keys);
+}
+
+/*
+ freeTransposedData
+ 
+ input dynamically allocated transposed
+ Frees dynamically allocated memory
+ */
+void freeTransposedData(double **mat) {
+    //Free all rows of matrix
+    for(int i=0; i<COLS; i++) {
+        free(mat[i]);
+    }
+    //Free matrix
+    free(mat);
 }
 
 /*
