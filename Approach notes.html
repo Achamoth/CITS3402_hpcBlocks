@@ -52,3 +52,19 @@
 <li>This last observation was a strong hint to me that the slowdown was being caused by cache mismanagement issues in the code. Because threads would run faster when no other threads were executing, this suggested that the threads were consistently interfering with each other during work on the last column. The most likely reason for this would be cache mismanagement; the multi-threading attept was probably increasing the number of cashe-misses, and the ratio of cache-hits:cache-misses would improve when only one thread was active. My next task was thus to explore the memory access patterns of the code within the tasks for the last column</li>
 </ul>
 </p>
+
+<h3> Issues observed with code </h3>
+<p>
+<ul>
+<li>Observed that since block database was storing pointers to blocks, rather than blocks, there would be lots of cache misses in collision detection (which loops through the block database). The reason is that while the pointers are all stored contiguously in main memory, the blocks themselves are not; they are in dynamically allocated spots in main memory, so each reference to a subsequent block in the database will likely cause a cache miss</li>
+
+<li>Observed that the loop over columns would likely cause lots of cache misses, since it would mean the inner loop is over rows, and this would likely mean that each new memory reference is to a piece of the matrix that doesn't exist in cache</li>
+</ul>
+</p>
+
+<h3> Attempts made to rectify cache unfriendliness in code </h3>
+<p>
+<ul>
+<li> Following from the above observations, I transposed the matrix (i.e. created a new matrix whose rows equaled the old matrix's columns) and used that new transposed matrix for the block generation. This way, the outer loop in block generation (while still over the columns of the data set, in a logical sense), would be over the rows of the transposed matrix, increasing cache friendliness. This drastically improved performance, decreasing execution time (for parallel code) for columns 0-498 from about 17 seconds down to roughly 7 seconds</li>
+</ul>
+</p>
