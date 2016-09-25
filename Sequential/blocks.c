@@ -16,10 +16,6 @@ int main(int argc, char** argv){
 	double **dataMatrix = (double**)malloc(1*sizeof(double*));
     //Read in matrix, and record number of rows and columns in ROWS and COLS
     dataMatrix = readMatrix(DATA_FILE, dataMatrix);
-    //Transpose data matrix
-    double **transposedData = transposeMatrix(dataMatrix);
-    //Free original matrix
-    freeData(dataMatrix);
     
     // Allocate memory for keys
 	long long *keyDatabase = malloc(ROWS*sizeof(long long));
@@ -31,15 +27,14 @@ int main(int argc, char** argv){
     
     //Find all blocks in matrix
     int numBlocks = 0;
-    blockDatabase = findBlocks(blockDatabase, transposedData, keyDatabase, &numBlocks);
+    blockDatabase = findBlocks(blockDatabase, dataMatrix, keyDatabase, &numBlocks);
     
     //Find all collisions among blocks
     int numCollisions = 0;
     Collision **collisions = findCollisions(blockDatabase, numBlocks, &numCollisions);
     
     //Free all dynamically allocated memory for key and matrix databases
-    freeTransposedData(transposedData);
-    free(keyDatabase);
+    freeData(dataMatrix, keyDatabase);
     //Free dynamically allocated memory for block database
     freeBD(blockDatabase, numBlocks);
     //Free dynamically allocated memory for collision database

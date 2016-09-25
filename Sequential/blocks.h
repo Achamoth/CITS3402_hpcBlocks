@@ -9,13 +9,13 @@
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
-#include <omp.h>
 
 //------------------------------------------------------------------
 // Struct declaration for blocks
 //------------------------------------------------------------------
 typedef struct Block {
     long long signature;
+    double sumOfElements;
     int column;
 } Block;
 
@@ -33,11 +33,9 @@ typedef struct Collision {
 extern void readData(char *, double **);
 extern void readKeys(char *, long long *);
 extern double **readMatrix(char *, double **);
-extern double **transposeMatrix(double **);
-extern void freeData(double **);
+extern void freeData(double **, long long *);
 extern void freeBD(Block **, int);
 extern void freeCollisionDB(Collision **, int);
-extern void freeTransposedData(double **);
 extern Block **findBlocks(Block **, double **, long long *, int *);
 extern Collision **findCollisions(Block **, int, int *);
 
@@ -47,7 +45,6 @@ extern Collision **findCollisions(Block **, int, int *);
 #define DATA_FILE "data.txt"
 #define KEY_FILE "keys.txt"
 #define DIA 0.000001
-#define NUM_THREADS 4
 extern const char* programName;
 extern int ROWS;
 extern int COLS;
