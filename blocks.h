@@ -23,7 +23,7 @@ typedef struct Block {
 // Struct declaration for collisions
 //------------------------------------------------------------------
 typedef struct Collision {
-    Block **collidingBlocks;
+    int *columns;
     int numBlocksInCollision;
 } Collision;
 
@@ -35,18 +35,18 @@ extern void readKeys(char *, long long *);
 extern double **readMatrix(char *, double **);
 extern double **transposeMatrix(double **);
 extern void freeData(double **);
-extern void freeBD(Block **, int);
-extern void freeCollisionDB(Collision **, int);
+//extern void freeBD(Block **, int);
+extern void freeCollisionDB(Collision *, int);
 extern void freeTransposedData(double **);
-extern Block **findBlocks(Block **, double **, long long *, int *);
-extern Collision **findCollisions(Block **, int, int *);
+extern Block *findBlocks(Block *, double **, long long *, int *);
+extern Collision *findCollisions(Block *, int, int *);
 
 //------------------------------------------------------------------
 // Package accessible variables and definitions
 //------------------------------------------------------------------
 #define DATA_FILE "data.txt"
 #define KEY_FILE "keys.txt"
-#define DIA 0.000001
+#define DIA 0.0000025
 #define NUM_THREADS 4
 extern const char* programName;
 extern int ROWS;

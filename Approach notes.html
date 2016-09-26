@@ -68,3 +68,22 @@
 <li> Following from the above observations, I transposed the matrix (i.e. created a new matrix whose rows equaled the old matrix's columns) and used that new transposed matrix for the block generation. This way, the outer loop in block generation (while still over the columns of the data set, in a logical sense), would be over the rows of the transposed matrix, increasing cache friendliness. This drastically improved performance, decreasing execution time (for parallel code) for columns 0-498 from about 17 seconds down to roughly 7 seconds</li>
 </ul>
 </p>
+
+<h3> First timing of collision detection </h3>
+<p>
+<ul>
+<li> Timed entire program (as it is so far, which generates all blocks and all collisions), and it took <b>1 minute 33 seconds</b> to run. The block generation takes roughly <b>7 seconds</b (note these tests are being carried out without the 499th block), so this means collision detection is taking roughly <b>1 minute 25 seconds</b> to run. Collision detection is still sequential</li>
+
+<li> Will attempt to speed up collision detection by making block database a single array of blocks, (i.e a pointer to a block) rather than an array of pointers to blocks (i.e a pointer to a pointer to a block). This should increase the cache friendliness of the collision detection code (which loops through all blocks in the blockDB), as there are likely to be far less cache misses</li>
+
+<li> Made block database contiguous, and did the same to collision database. So they’re now types <i>Block *</i> and <i>Collision *</i> instead of <i>Block **</i> and <i>Collision **</i>. Correctness doesn’t seem to have been impacted. Also, collisions no longer store an array of blocks (per collision). Instead, each collision only stores the columns of the colliding blocks. i.e. if 3 blocks across 3 different columns have the same signature, then the 3 column numbers will be stored in the collision struct, rather than the 3 blocks themselves.</li>
+
+<li> After making block array contiguous, execution sped up very slightly (5-10 seconds max). Will now work on parallelising collision detection</li>
+</ul>
+</p>
+
+<h3> First attempt at parallelising collision detection </h3>
+<p>
+<ul>
+<li> </li>
+</ul>

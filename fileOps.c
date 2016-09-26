@@ -204,13 +204,11 @@ void freeBD(Block **bd, int numBlocks) {
  input collision database and number of collisions
  Frees all memory allocated for collision database, and individual collisions
  */
-void freeCollisionDB(Collision **cdb, int numCollisions) {
+void freeCollisionDB(Collision *cdb, int numCollisions) {
     //Free each collision
     for(int i=0; i<numCollisions; i++) {
-        //First, free each collision's block database (don't need to free individual blocks, as they're already freed in freeBD())
-        free(cdb[i]->collidingBlocks);
-        //Now, free collision
-        free(cdb[i]);
+        //First, free each collision's column database
+        free(cdb[i].columns);
     }
     //Now, free database memory
     free(cdb);

@@ -27,7 +27,7 @@ int main(int argc, char** argv){
 	readKeys(KEY_FILE, keyDatabase);
     
     //Create pool of blocks
-    Block **blockDatabase = malloc(1*sizeof(Block *));;
+    Block *blockDatabase = malloc(1*sizeof(Block));;
     
     //Find all blocks in matrix
     int numBlocks = 0;
@@ -35,13 +35,14 @@ int main(int argc, char** argv){
     
     //Find all collisions among blocks
     int numCollisions = 0;
-    Collision **collisions = findCollisions(blockDatabase, numBlocks, &numCollisions);
+    Collision *collisions = findCollisions(blockDatabase, numBlocks, &numCollisions);
     
     //Free all dynamically allocated memory for key and matrix databases
     freeTransposedData(transposedData);
     free(keyDatabase);
     //Free dynamically allocated memory for block database
-    freeBD(blockDatabase, numBlocks);
+    //freeBD(blockDatabase, numBlocks);
+    free(blockDatabase);
     //Free dynamically allocated memory for collision database
     freeCollisionDB(collisions, numCollisions);
     //Exit program
