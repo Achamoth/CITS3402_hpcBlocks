@@ -1,7 +1,7 @@
 /*
-	CITS3402 Project 1 2016
-	Name:			Ammar Abu Shamleh, Pradyumn Vij 
-	Student number: 21521274, 21469477
+    CITS3402 Project 1 2016
+    Name:           Ammar Abu Shamleh, Pradyumn Vij 
+    Student number: 21521274, 21469477
     Date:           September 2016
 */
 #include "blocks.h"
@@ -9,38 +9,6 @@
 int ROWS;
 int COLS;
     
-/*
-	readData
-
-	input char pointer to file containing comma separated floating point numbers
-	Reads data from data.txt into 2d array of doubles ROWS x COLS in size
-*/
-void readData(char *filename, double **dataMatrix){
-	FILE *dataFile = fopen(filename, "r");
-
-	//	Null file pointer check
-	if(dataFile == NULL){
-		fprintf(stderr, "%s - The file \"%s\" could not be opened\n", 
-			programName, filename);
-
-		exit(EXIT_FAILURE);
-	}
-
-	for(int r = 0; r < ROWS; ++r){
-		for(int c = 0; c < COLS; ++c){
-			//  Use fscanf to skip the comma characters
-			fscanf(dataFile, "%lf%*c", &dataMatrix[r][c]);
-            //TEST OUTPUT
-			//printf("%lf found at index %d : %d\n", dataMatrix[r][c], r, c);
-		}
-	}
-
-	//	Close file pointer if open
-	if(dataFile != NULL){
-		fclose(dataFile);
-	}
-}
-
 /*
     readMatrix
         
@@ -102,49 +70,84 @@ double **readMatrix(char *filename, double **mat) {
 }
 
 /*
-	readKeys
-
-	input char pointer to file containing space separated long longs
-	Reads data from KEY_FILE into array of long long ROW in size
+    readKeys
+    input char pointer to file containing space separated long longs
+    Reads data from KEY_FILE into array of long long ROW in size
 */
 void readKeys(char *filename, long long *keyDatabase){
-	FILE *dataFile = fopen(filename, "r");
+    FILE *dataFile = fopen(filename, "r");
 
-	//	Null file pointer check
-	if(dataFile == NULL){
-		fprintf(stderr, "%s - The file \"%s\" could not be opened\n", 
-			programName, filename);
+    //  Null file pointer check
+    if(dataFile == NULL){
+        fprintf(stderr, "%s - The file \"%s\" could not be opened\n", 
+            programName, filename);
 
-		exit(EXIT_FAILURE);
-	}
+        exit(EXIT_FAILURE);
+    }
 
-	//	Read keys, separeted by whitespace
-	for(int k = 0; k < ROWS; ++k){
-		fscanf(dataFile, "%lld", &keyDatabase[k]);
-	}
+    //  Read keys, separeted by whitespace
+    for(int k = 0; k < ROWS; ++k){
+        fscanf(dataFile, "%lld", &keyDatabase[k]);
+    }
 
-	//	Close file pointer if open
-	if(dataFile != NULL){
-		fclose(dataFile);
-	}
+    //  Close file pointer if open
+    if(dataFile != NULL){
+        fclose(dataFile);
+    }
+}
+
+/*
+    transposeMatrix
+    
+    input data matrix
+    Tranposes data matrix
+*/
+double **transposeMatrix(double **dataMatrix) {
+    //Allocate memory for transposed matrix
+    double **transposed = (double **) malloc(sizeof(double *) * COLS);
+    for(int i=0; i<COLS; i++) {
+        transposed[i] = (double *) malloc(sizeof(double) * ROWS);
+    }
+    
+    //Store data in transposed matrix
+    for(int col=0; col<COLS; col++) {
+        for(int row=0; row<ROWS; row++) {
+            transposed[col][row] = dataMatrix[row][col];
+        }
+    }
+    
+    //Return pointer to transposed matrix
+    return transposed;
 }
 
 /*
     freeData
  
-    input dynamically allocated matrix and keyDatabase
+    input dynamically allocated matrix
     Frees dynamically allocated memory
 */
-void freeData(double **mat, long long *keys) {
+void freeData(double **mat) {
     //Free all rows of matrix
     for(int i=0; i<ROWS; i++) {
         free(mat[i]);
     }
     //Free matrix
     free(mat);
-    
-    //Free key database
-    free(keys);
+}
+
+/*
+ freeTransposedData
+ 
+ input dynamically allocated transposed
+ Frees dynamically allocated memory
+ */
+void freeTransposedData(double **mat) {
+    //Free all rows of matrix
+    for(int i=0; i<COLS; i++) {
+        free(mat[i]);
+    }
+    //Free matrix
+    free(mat);
 }
 
 /*
@@ -168,13 +171,11 @@ void freeBD(Block **bd, int numBlocks) {
  input collision database and number of collisions
  Frees all memory allocated for collision database, and individual collisions
  */
-void freeCollisionDB(Collision **cdb, int numCollisions) {
+void freeCollisionDB(Collision *cdb, int numCollisions) {
     //Free each collision
     for(int i=0; i<numCollisions; i++) {
-        //First, free each collision's block database (don't need to free individual blocks, as they're already freed in freeBD())
-        free(cdb[i]->collidingBlocks);
-        //Now, free collision
-        free(cdb[i]);
+        //First, free each collision's column database
+        free(cdb[i].columns);
     }
     //Now, free database memory
     free(cdb);

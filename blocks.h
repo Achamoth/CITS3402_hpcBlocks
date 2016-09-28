@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
-#include <time.h>
+#include <omp.h>
 
 //------------------------------------------------------------------
 // Struct declaration for blocks
@@ -19,18 +19,21 @@ typedef struct Block {
     int column;
 } Block;
 
-typedef struct pair{
-	double value;
-	int index;
-} pair;
-
 //------------------------------------------------------------------
 // Struct declaration for collisions
 //------------------------------------------------------------------
 typedef struct Collision {
-    Block **collidingBlocks;
+    int *columns;
     int numBlocksInCollision;
 } Collision;
+
+//------------------------------------------------------------------
+// Struct declaration for pair
+//------------------------------------------------------------------
+typedef struct pair{
+	double value;
+	long long key;
+} pair;
 
 //------------------------------------------------------------------
 // Package accessible functions
@@ -38,18 +41,21 @@ typedef struct Collision {
 extern void readData(char *, double **);
 extern void readKeys(char *, long long *);
 extern double **readMatrix(char *, double **);
-extern void freeData(double **, long long *);
-extern void freeBD(Block **, int);
-extern void freeCollisionDB(Collision **, int);
-extern void findBlocks(Block **, double **, long long *, int *);
-extern Collision **findCollisions(Block **, int, int *);
+extern double **transposeMatrix(double **);
+extern void freeData(double **);
+//extern void freeBD(Block **, int);
+extern void freeCollisionDB(Collision *, int);
+extern void freeTransposedData(double **);
+extern Block *findBlocks(Block *, double **, long long *, int *);
+extern Collision *findCollisions(Block *, int, int *);
 
 //------------------------------------------------------------------
 // Package accessible variables and definitions
 //------------------------------------------------------------------
 #define DATA_FILE "data.txt"
 #define KEY_FILE "keys.txt"
-#define DIA 0.000001
+#define DIA 0.0000025
+#define NUM_THREADS 4
 extern const char* programName;
 extern int ROWS;
 extern int COLS;
