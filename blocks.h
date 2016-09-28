@@ -35,11 +35,11 @@ extern void readKeys(char *, long long *);
 extern double **readMatrix(char *, double **);
 extern double **transposeMatrix(double **);
 extern void freeData(double **);
-//extern void freeBD(Block **, int);
 extern void freeCollisionDB(Collision *, int);
 extern void freeTransposedData(double **);
 extern Block *findBlocks(Block *, double **, long long *, int *);
 extern Collision *findCollisions(Block *, int, int *);
+extern Collision *findCollisionsOptimised(Block *, int, int *);
 
 //------------------------------------------------------------------
 // Package accessible variables and definitions

@@ -148,14 +148,12 @@ Block *findBlocks(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
  findCollisions
  
  input blockDatabase
- Finds all collisions between generated blocks and return collision database; also store number of collisions found
+ Finds all collisions between generated blocks and return collision database; also store number of collisions found.
  */
 Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFound) {
     //Set up collision database
     int numCollisions = 0;
     Collision *collisions = (Collision *) malloc((numCollisions+1) * sizeof(Collision));
-    //Allocate memory for first entry of collision database
-    //collisions[0] = (Collision *) malloc(sizeof(Collision));
     //Record whether or not block has already been detected in a collision
     bool *collided = malloc(sizeof(bool) * numBlocks);
     for(int i=0; i<numBlocks; i++) collided[i] = false;
@@ -203,5 +201,80 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
     }
     free(collided);
     *numberCollisionsFound = numCollisions;
+    return collisions;
+}
+
+/*
+ cmpfunc
+ 
+ Input; two variables of same datatype
+ Performs comparison for sorting function. Returns positive if first value is larger; negative if second value is larger
+ */
+int cmpfunc(const void *a, const void *b) {
+    //Find value of block a's signature
+    long sigA = 0;
+    Block ba = *(Block *) a;
+    sigA = ba.signature;
+    
+    //Find value of block b's signature
+    long sigB = 0;
+    Block bb = *(Block *) b;
+    sigB = bb.signature;
+    
+    //Return comparison
+    return sigA - sigB;
+}
+
+/*
+ findCollisionsOptimised
+ 
+ input blockDatabase
+ Finds all collisions between generated blocks and return collision database; also store number of collisions found. Using sorting method instead of brute force
+ */
+Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCollisionsFound) {
+    //Sort block database
+    qsort(blockDB, numBlocks, sizeof(Block), cmpfunc);
+    
+    //Set up collision database
+    Collision *collisions = (Collision *) malloc(1 * sizeof(Collision));
+    
+    //Linearly loop through block database, storing collisions as they're found
+    int numCollisions = 0;
+    long previousSig = blockDB[0].signature;
+    int curBlocksInCollision = 0;
+    for(int i=1; i<numBlocks; i++) {
+        if(blockDB[i].signature == previousSig) {
+            //Collision detected
+            if(curBlocksInCollision == 0) {
+                //New collision. Reallocate more memory for collision database
+                collisions = (Collision *) realloc(collisions, sizeof(Collision) * (numCollisions + 1));
+                //Increment counter
+                numCollisions++;
+                //Store first two blocks of current collision
+                curBlocksInCollision = 2;
+                collisions[numCollisions-1].numBlocksInCollision = 2;
+                collisions[numCollisions-1].columns = (int *) malloc(sizeof(int) * 5);
+                collisions[numCollisions-1].columns[0] = blockDB[i-1].column;
+                collisions[numCollisions-1].columns[1] = blockDB[i].column;
+                printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
+            }
+            else {
+                //Increment counter
+                curBlocksInCollision++;
+                collisions[numCollisions-1].numBlocksInCollision = curBlocksInCollision;
+                //Store current block's column number, and rellocate collisions column array
+                collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, sizeof(int) * curBlocksInCollision);
+                collisions[numCollisions-1].columns[curBlocksInCollision-1] = blockDB[i].column;
+                printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
+            }
+        }
+        else {
+            //No collision between previous block and current block. Record new signature
+            previousSig = blockDB[i].signature;
+            curBlocksInCollision = 0;
+        }
+    }
+    
+    //Return collision database
     return collisions;
 }

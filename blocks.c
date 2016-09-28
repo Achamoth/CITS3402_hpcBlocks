@@ -34,17 +34,24 @@ int main(int argc, char** argv){
     blockDatabase = findBlocks(blockDatabase, transposedData, keyDatabase, &numBlocks);
     
     //Find all collisions among blocks
-    int numCollisions = 0;
-    Collision *collisions = findCollisions(blockDatabase, numBlocks, &numCollisions);
+    //int numCollisions = 0;
+    //Collision *collisions = findCollisions(blockDatabase, numBlocks, &numCollisions);
+    
+    //Find all collisions again using optimised code
+    int numCollisionsOptimised = 0;
+    Collision *collisionsOptimised = findCollisionsOptimised(blockDatabase, numBlocks, &numCollisionsOptimised);
+    
+    //Check for correctness with new optimised code
+    //printf("%d\t%d\n", numCollisions, numCollisionsOptimised);
     
     //Free all dynamically allocated memory for key and matrix databases
     freeTransposedData(transposedData);
     free(keyDatabase);
     //Free dynamically allocated memory for block database
-    //freeBD(blockDatabase, numBlocks);
     free(blockDatabase);
     //Free dynamically allocated memory for collision database
-    freeCollisionDB(collisions, numCollisions);
+    //freeCollisionDB(collisions, numCollisions);
+    freeCollisionDB(collisionsOptimised, numCollisionsOptimised);
     //Exit program
 	return EXIT_SUCCESS;
 }
