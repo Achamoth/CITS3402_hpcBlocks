@@ -85,5 +85,7 @@
 <h3> First attempt at parallelising collision detection </h3>
 <p>
 <ul>
-<li> </li>
+<li> Before beginning parallelisation, I decided to try and improve the efficiency of the base code first. I optimised the code by sorting the block database by signatures, and then progressing linearly through the database creating collisions. This improved complexity from O(n^2) to O(nlogn), and run-time fell from about 40 seconds to a fraction of a second. However, I discovered a small correctness issue, in that blocks from the same column would be marked in a collision </li>
+
+<li> After some more examination and more thought, I discovered that the issue actually doesn’t exist, as no 2 separate blocks within the same column should ever have the same signature. The same signature should only exist between 2 different blocks if the blocks have the same rows (i.e. exactly the same sum of keys). Thus in any one individual column, signatures are entirely unique. This being the case, I now need to discover why the results being returned by the optimised code and those being returned by the brute-force code are different</li>
 </ul>
