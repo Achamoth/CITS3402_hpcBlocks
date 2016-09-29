@@ -83,6 +83,64 @@ Block *findBlocks(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
         }
     }
     
+    //Find all blocks in last column using parallel tasks
+    /*int col = 499;
+    #pragma omp parallel
+    {
+        //Have a thread generate tasks to split block generation of last column up
+        #pragma omp single
+        {
+            //int numThreads = omp_get_num_threads();
+            //int increment = ceil((ROWS/numThreads));
+            int increment = 300;
+            int init = 0;
+            int final = init+increment;
+            while(final < ROWS) {
+                //Generate a task for each chunk of the column that finds all the blocks in that chunk
+                #pragma omp task firstprivate(init, final)
+                {
+                    //Private thread variables
+                    Block **partialBlockDB = (Block **) malloc(1 * sizeof(Block *));
+                    int localNextBlock = 0;
+                    //Thread number
+                    int ID = omp_get_thread_num();
+                    for(int r1=init; r1<final; r1++) {
+                        for(int r2=r1+1; r2<ROWS; r2++) {
+                            //Check if they're in the same neighbourhood
+                            if(fabs(mat[col][r1] - mat[col][r2]) > DIA) continue;
+                            for(int r3 = r2+1; r3<ROWS; r3++) {
+                                //Check if they're in the same neighbourhood
+                                if(fabs(mat[col][r1]-mat[col][r3])>DIA || fabs(mat[col][r2]-mat[col][r3])>DIA) continue;
+                                for(int r4=r3+1; r4<ROWS; r4++) {
+                                    //Check they're in the same neighbourhood
+                                    if(fabs(mat[col][r4]-mat[col][r1])>DIA || fabs(mat[col][r4]-mat[col][r2])>DIA || fabs(mat[col][r4]-mat[col][r4])>DIA) continue;
+                                    //We have found a block, and must store it in the block database
+                                    partialBlockDB = (Block **) realloc(partialBlockDB, (localNextBlock+1) * sizeof(Block *));
+                                    partialBlockDB[localNextBlock] = (Block *) malloc(sizeof(Block));
+                                    partialBlockDB[localNextBlock]->signature = findSig(r1, r2, r3, r4, kd);
+                                    partialBlockDB[localNextBlock]->column = col;
+                                    localNextBlock++;
+                                    
+                                    //TEST OUTPUT
+                                    printf("Thread %d: Found block at column %d on rows %d, %d, %d, %d\n", ID, col, r1, r2, r3, r4);
+                                }
+                            }
+                        }
+                    }
+                    //Add partial block database to complete block database
+                    #pragma omp critical
+                    {
+                        blockDB = mergeBlockDatabases(blockDB, partialBlockDB, localNextBlock, &nextBlock);
+                    }
+                }
+                //Calculate next chunk size and starting and ending index values
+                final += increment;
+                init += increment;
+                if(final > ROWS) final = ROWS;
+            }
+        }
+    }*/
+    
     *numBlocks = nextBlock;
     printf("%d\n", *numBlocks);
     return blockDB;
@@ -150,35 +208,6 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
 }
 
 /*
- mergeCollisionDatabases
- 
- input collective collision databases and partial collision databases, along with sizes of each
- Copies all collisions in partial database into collective database
-*/
-Collision *mergeCollisionDatabases(Collision *cdb, Collision *partial, int *totCollisions, int numInPartial) {
-    //Reallocate more memory for collective database
-    cdb = (Collision *) realloc(cdb, (numInPartial+ (*totCollisions)) * sizeof(Collision));
-    
-    //Loop over all entries in partial database
-    for(int i=0; i<numInPartial; i++) {
-        //Copy all data over to collective database
-        cdb[i + *totCollisions].numBlocksInCollision = partial[i].numBlocksInCollision;
-        //Allocate memory for column database
-        cdb[i + *totCollisions].columns = (int *) malloc(sizeof(int) * partial[i].numBlocksInCollision);
-        //Copy all column entries over
-        for(int j=0; j<partial[i].numBlocksInCollision; j++) {
-            cdb[i + *totCollisions].columns[j] = partial[i].columns[j];
-        }
-    }
-    
-    //Update collective count of collisions
-    *totCollisions += numInPartial;
-    
-    //Return new pointer to collective collision database
-    return cdb;
-}
-
-/*
  cmpfunc
  
  Input; two variables of same datatype
@@ -210,102 +239,45 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
     qsort(blockDB, numBlocks, sizeof(Block), cmpfunc);
     
     //Set up collision database
-    Collision *collectiveCollisionDB = (Collision *) malloc(1 * sizeof(Collision));
-    int numTotalCollisions = 0;
+    Collision *collisions = (Collision *) malloc(1 * sizeof(Collision));
     
-    //Begin parallel region
-    omp_set_num_threads(NUM_THREADS);
-    #pragma omp parallel
-    {
-        #pragma omp single
-        {
-            //Set up index values for thread work
-            int nthreads = omp_get_num_threads();
-            int start = 0;
-            int increment = numBlocks/nthreads;
-            int finish = start + increment;
-            //Move finishing index value to next collision (i.e. next signature)
-            while(blockDB[finish].signature == blockDB[finish-1].signature) {
-                finish++;
+    //Linearly loop through block database, storing collisions as they're found
+    int numCollisions = 0;
+    long previousSig = blockDB[0].signature;
+    int curBlocksInCollision = 0;
+    for(int i=1; i<numBlocks; i++) {
+        if(blockDB[i].signature == previousSig) {
+            //Collision detected
+            if(curBlocksInCollision == 0) {
+                //New collision. Reallocate more memory for collision database
+                collisions = (Collision *) realloc(collisions, sizeof(Collision) * (numCollisions + 1));
+                //Increment counter
+                numCollisions++;
+                //Store first two blocks of current collision
+                curBlocksInCollision = 2;
+                collisions[numCollisions-1].numBlocksInCollision = 2;
+                collisions[numCollisions-1].columns = (int *) malloc(sizeof(int) * 5);
+                collisions[numCollisions-1].columns[0] = blockDB[i-1].column;
+                collisions[numCollisions-1].columns[1] = blockDB[i].column;
+                printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
             }
-            
-            //Generate tasks to find all collisions
-            while(start < numBlocks) {
-                //Now create task to find all collisions between start and finish
-                #pragma omp task
-                {
-                    //Get thread number
-                    int ID = omp_get_thread_num();
-                    
-                    //Set up partial collision database
-                    Collision *collisions = (Collision *) malloc(1 * sizeof(Collision));
-                    
-                    //Linearly loop through block database, storing collisions as they're found
-                    int numCollisions = 0;
-                    long previousSig = blockDB[start].signature;
-                    int curBlocksInCollision = 0;
-                    for(int i=start+1; i<finish; i++) {
-                        if(blockDB[i].signature == previousSig) {
-                            //Collision detected
-                            if(curBlocksInCollision == 0) {
-                                //New collision. Reallocate more memory for collision database
-                                collisions = (Collision *) realloc(collisions, sizeof(Collision) * (numCollisions + 1));
-                                //Increment counter
-                                numCollisions++;
-                                //Store first two blocks of current collision
-                                curBlocksInCollision = 2;
-                                collisions[numCollisions-1].numBlocksInCollision = 2;
-                                collisions[numCollisions-1].columns = (int *) malloc(sizeof(int) * 5);
-                                collisions[numCollisions-1].columns[0] = blockDB[i-1].column;
-                                collisions[numCollisions-1].columns[1] = blockDB[i].column;
-                                printf("Thread %d: Found collision %d on signature %ld with %d blocks in it\n", ID, numCollisions-1, previousSig, curBlocksInCollision);
-                            }
-                            else {
-                                //Increment counter
-                                curBlocksInCollision++;
-                                collisions[numCollisions-1].numBlocksInCollision = curBlocksInCollision;
-                                //Store current block's column number, and rellocate collisions column array
-                                collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, sizeof(int) * curBlocksInCollision);
-                                collisions[numCollisions-1].columns[curBlocksInCollision-1] = blockDB[i].column;
-                                printf("Thread %d: Found collision %d on signature %ld with %d blocks in it\n", ID, numCollisions-1, previousSig, curBlocksInCollision);
-                            }
-                        }
-                        else {
-                            //No collision between previous block and current block. Record new signature
-                            previousSig = blockDB[i].signature;
-                            curBlocksInCollision = 0;
-                        }
-                    }
-                    //Merge partial collision database with complete collision database
-                    #pragma omp critical
-                    {
-                        collectiveCollisionDB = mergeCollisionDatabases(collectiveCollisionDB, collisions, &numTotalCollisions, numCollisions);
-                    }
-                    //Free partial collision database
-                    for(int i=0; i<numCollisions; i++) {
-                        //Free current collision's column database
-                        free(collisions[i].columns);
-                    }
-                    //Free all collisions
-                    free(collisions);
-                    
-                }
-                //Update indexes to create next task
-                start = finish;
-                finish += increment;
-                if(finish > numBlocks) {
-                    finish = numBlocks;
-                }
-                else {
-                    //Move finishing index value to next collision (i.e. next signature)
-                    while(blockDB[finish].signature == blockDB[finish-1].signature) {
-                        finish++;
-                    }
-                }
+            else {
+                //Increment counter
+                curBlocksInCollision++;
+                collisions[numCollisions-1].numBlocksInCollision = curBlocksInCollision;
+                //Store current block's column number, and rellocate collisions column array
+                collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, sizeof(int) * curBlocksInCollision);
+                collisions[numCollisions-1].columns[curBlocksInCollision-1] = blockDB[i].column;
+                printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
             }
+        }
+        else {
+            //No collision between previous block and current block. Record new signature
+            previousSig = blockDB[i].signature;
+            curBlocksInCollision = 0;
         }
     }
     
     //Return collision database
-    return collectiveCollisionDB;
+    return collisions;
 }

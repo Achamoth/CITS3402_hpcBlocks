@@ -42,7 +42,7 @@ int main(int argc, char** argv){
     int numCollisionsOptimised = 0;
     Collision *collisionsOptimised = findCollisionsOptimised(blockDatabase, numBlocks, &numCollisionsOptimised);
     double execTime = omp_get_wtime() - startTime;
-    printf("Collision detection took %lf milli-seconds, paralellized\n", (double) execTime*1000);
+    printf("Collision detection took %lf milli-seconds, sequentially\n", (double)execTime*1000);
     
     //Check for correctness with new optimised code
     //printf("%d\t%d\n", numCollisions, numCollisionsOptimised);
