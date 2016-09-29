@@ -176,7 +176,6 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
             if(compBlock.signature == curSig) {
                 //Add block to current collision
                 if(curCollisions == 0) {
-                    collided[j] = true;
                     //Allocate memory for collision's column database, and store first column
                     collisions[numCollisions].columns = (int *) malloc(5 * sizeof(int));
                     collisions[numCollisions].numBlocksInCollision = 1;
@@ -186,7 +185,8 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
                     numCollisions++;
                     collisions = (Collision *) realloc(collisions, (numCollisions+1)*sizeof(Collision));
                 }
-                printf("%d %d: ", numCollisions-1, curCollisions);
+                //Store next block in collision
+                collided[j] = true;
                 collisions[numCollisions-1].numBlocksInCollision += 1;
                 collisions[numCollisions-1].columns[curCollisions] = compBlock.column;
                 curCollisions++;
@@ -194,6 +194,7 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
                 collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, ((curCollisions+1)*sizeof(int)));
                 
                 //TEST OUTPUT
+                printf("%d %d: ", numCollisions-1, curCollisions);
                 printf("Found collision at blocks %d and %d. Cols are: %d and %d. Sigs are: %lld and %lld \n", i, j, curBlock.column, collisions[numCollisions-1].columns[curCollisions-1], curSig, compBlock.signature);
                 
             }
