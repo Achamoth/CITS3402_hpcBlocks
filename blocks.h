@@ -28,6 +28,14 @@ typedef struct Collision {
 } Collision;
 
 //------------------------------------------------------------------
+// Struct declaration for pair
+//------------------------------------------------------------------
+typedef struct pair{
+	double value;
+	long long key;
+} pair;
+
+//------------------------------------------------------------------
 // Package accessible functions
 //------------------------------------------------------------------
 extern void readData(char *, double **);
@@ -39,6 +47,7 @@ extern void freeCollisionDB(Collision *, int);
 extern void freeTransposedData(double **);
 extern Block *findBlocks(Block *, double **, long long *, int *);
 extern Block *findBlocksParallel(Block *, double **, long long *, int *);
+extern Block *findBlocksOptimised(Block *, double **, long long *, int *);
 extern Collision *findCollisions(Block *, int, int *);
 extern Collision *findCollisionsParallel(Block *, int, int *);
 extern Collision *findCollisionsOptimised(Block *, int, int *);

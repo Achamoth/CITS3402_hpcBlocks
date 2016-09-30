@@ -8,7 +8,7 @@
 
 /*
  findSig
- 
+
  input key database, and four row numbers
  Finds sum of signatures at specified row numbers
  */
@@ -19,7 +19,7 @@ long long findSig(int r1, int r2, int r3, int r4, long long *kd) {
 
 /*
  mergeBlockDatabases
- 
+
  input partial block database and complete block database
  Copies all data (actually copies pointers) from partial block database to complete database
  */
@@ -35,7 +35,7 @@ Block *mergeBlockDatabases(Block *completeDB, Block *partialDB, int numBlockInPa
 
 /*
  findBlocks
- 
+
  input blockDatabase and matrixDatabase
  Finds all blocks in matrixDatabase and stores them in blockDatabase
  */
@@ -66,7 +66,7 @@ Block *findBlocks(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
                         blockDB[nextBlock].column = col;
                         nextBlock++;
                         //TEST OUTPUT
-                        printf("Found block at column %d on rows %d, %d, %d, %d\n", col, row1, row2, row3, row4);
+                        //printf("Found block at column %d on rows %d, %d, %d, %d\n", col, row1, row2, row3, row4);
                     }
                 }
             }
@@ -78,7 +78,7 @@ Block *findBlocks(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
 
 /*
  findBlocksParallel
- 
+
  input blockDatabase and matrixDatabase
  Finds all blocks in matrixDatabase and stores them in blockDatabase. Parallelized
  */
@@ -110,7 +110,7 @@ Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numB
                             partialBlockDB[localNextBlock].column = col;
                             localNextBlock++;
                             //TEST OUTPUT
-                            printf("Thread %d: Found block at column %d on rows %d, %d, %d, %d\n", ID, col, row1, row2, row3, row4);
+                            //printf("Thread %d: Found block at column %d on rows %d, %d, %d, %d\n", ID, col, row1, row2, row3, row4);
                         }
                     }
                 }
@@ -124,14 +124,84 @@ Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numB
             free(partialBlockDB);
         }
     }
-    
+
     *numBlocks = nextBlock;
     return blockDB;
 }
 
 /*
+    compareDoubles
+    Comparator function for qSort, to sort doubles in ascending order
+*/
+int compareDoubles(const void* a, const void* b){
+    pair resA = *(pair*)a;
+    pair resB = *(pair*)b;
+    if(resA.value < resB.value) return -1;
+    if(resA.value > resB.value) return 1;
+    return 0;
+}
+
+
+/*
+    findBlocksOptimised
+    input blockDatabase and matrixDatabase
+    Finds all blocks in matrixDatabase and stores them in blockDatabase
+    Sequential optimised code
+*/
+Block *findBlocksOptimised(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
+    int nextBlock = 0;
+    //Loop through matrix columns
+    // double* tempContainer = malloc(ROWS * sizeof(double));
+    pair* pairContainer = malloc(ROWS * sizeof(pair));
+    for(int col=0; col< COLS - 1; col++) {
+        // Create an array of doubles
+        for(int row = 0; row < ROWS; ++row){
+            //tempContainer[row] = mat[row][col];
+            pairContainer[row].value = mat[col][row];
+            pairContainer[row].key = kd[row];
+        }
+
+        // Use sliding technique to fill BlockDB
+        // lower bound in array
+        int lower = 0;
+        // sort the entire array in ascending order O(nlgn)
+        qsort(pairContainer, ROWS, sizeof(pair), compareDoubles);
+        // Upper bound incrementing is growing the size of the window, default start at 1
+        // Go out of bounds with inclusion of boundary ROWS
+        for(int upper = 1; upper <= ROWS; ++upper){
+            // Check if window contains elements in the same neighbourhood.
+            // If not move the lower bound up till it does or until upper == lower
+            while(pairContainer[upper-1].value - pairContainer[lower].value > DIA){
+                ++lower;
+                // Take note that the lower bound i.e. new window instance
+            }
+            // Get all combinations within the window of size 4
+            for(int i = lower; i < upper-1; ++i){
+                for(int j = i+1; j < upper-1; ++j){
+                    for(int k = j+1; k < upper-1; ++k){
+                        //  Increase memory for the new block pointer to the database
+                        blockDB = (Block *) realloc(blockDB, (nextBlock+1)*sizeof(Block));
+                        blockDB[nextBlock].signature = pairContainer[i].key + pairContainer[j].key + pairContainer[k].key + pairContainer[upper-1].key;
+                        blockDB[nextBlock].column = col;
+                        //  Increment number of blocks
+                        nextBlock++;
+                        // Uncomment to print all rows / indexes being found
+                        //printf("Found block at column %d on rows %lld, %lld, %lld, %lld\n", col, pairContainer[i].key, pairContainer[j].key, pairContainer[k].key, pairContainer[upper-1].key);
+                    }
+                }
+            }
+        }
+    }
+    // Free the utility container
+    *numBlocks = nextBlock;
+    free(pairContainer);
+    //printf("%d\n", *numBlocks);
+    return blockDB;
+}
+
+/*
  findCollisionsParallel
- 
+
  input blockDatabase
  Finds all collisions between generated blocks and return collision database; also store number of collisions found. Sequential brute-force code
  */
@@ -142,7 +212,7 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
     //Record whether or not block has already been detected in a collision
     bool *collided = malloc(sizeof(bool) * numBlocks);
     for(int i=0; i<numBlocks; i++) collided[i] = false;
-    
+
     //Loop over all blocks
     for(int i=0; i<numBlocks; i++) {
         Block curBlock = blockDB[i];
@@ -177,11 +247,11 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
                 curCollisions++;
                 //Allocate more memory for current collision column database
                 collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, ((curCollisions+1)*sizeof(int)));
-                
+
                 //TEST OUTPUT
-                printf("%d %d: ", numCollisions-1, curCollisions);
-                printf("Found collision at blocks %d and %d. Cols are: %d and %d. Sigs are: %lld and %lld \n", i, j, curBlock.column, collisions[numCollisions-1].columns[curCollisions-1], curSig, compBlock.signature);
-                
+                //printf("%d %d: ", numCollisions-1, curCollisions);
+                //printf("Found collision at blocks %d and %d. Cols are: %d and %d. Sigs are: %lld and %lld \n", i, j, curBlock.column, collisions[numCollisions-1].columns[curCollisions-1], curSig, compBlock.signature);
+
             }
         }
     }
@@ -192,7 +262,7 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
 
 /*
  findCollisionsParallel
- 
+
  input blockDatabase
  Finds all collisions between generated blocks and return collision database; also store number of collisions found. Parallelized brute-force code
  */
@@ -200,11 +270,11 @@ Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberColl
     //Set up collision database
     int totNumCollisions = 0;
     Collision *collisionsCollective = (Collision *) malloc((totNumCollisions+1) * sizeof(Collision));
-    //Record whether or not block has already been detected in a collision
-//    bool *collided = malloc(sizeof(bool) * numBlocks);
-//    for(int i=0; i<numBlocks; i++) collided[i] = false;
+    //  Record whether or not block has already been detected in a collision
+    //  bool *collided = malloc(sizeof(bool) * numBlocks);
+    //  for(int i=0; i<numBlocks; i++) collided[i] = false;
     omp_set_num_threads(NUM_THREADS);
-    #pragma omp parallel 
+    #pragma omp parallel
     {
         //Thread variables
         int ID = omp_get_thread_num();
@@ -212,7 +282,7 @@ Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberColl
         //Private partial collision database
         int numCollisions = 0;
         Collision *collisions = (Collision *) malloc((numCollisions+1) * sizeof(Collision));
-        
+
         //Loop over all blocks
         for(int i=ID; i<numBlocks; i+=nthreads) {
             Block curBlock = blockDB[i];
@@ -247,12 +317,12 @@ Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberColl
                     curCollisions++;
                     //Allocate more memory for current collision column database
                     collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, ((curCollisions+1)*sizeof(int)));
-                    
+
                     //TEST OUTPUT
-                    printf("Thread %d\t:", ID);
-                    printf("%d %d: ", numCollisions-1, curCollisions);
-                    printf("Found collision at blocks %d and %d. Cols are: %d and %d. Sigs are: %lld and %lld \n", i, j, curBlock.column, collisions[numCollisions-1].columns[curCollisions-1], curSig, compBlock.signature);
-                    
+                    //printf("Thread %d\t:", ID);
+                    //printf("%d %d: ", numCollisions-1, curCollisions);
+                    //printf("Found collision at blocks %d and %d. Cols are: %d and %d. Sigs are: %lld and %lld \n", i, j, curBlock.column, collisions[numCollisions-1].columns[curCollisions-1], curSig, compBlock.signature);
+
                 }
             }
         }
@@ -264,14 +334,14 @@ Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberColl
 
 /*
  mergeCollisionDatabases
- 
+
  input collective collision databases and partial collision databases, along with sizes of each
  Copies all collisions in partial database into collective database
 */
 Collision *mergeCollisionDatabases(Collision *cdb, Collision *partial, int *totCollisions, int numInPartial) {
     //Reallocate more memory for collective database
     cdb = (Collision *) realloc(cdb, (numInPartial+ (*totCollisions)) * sizeof(Collision));
-    
+
     //Loop over all entries in partial database
     for(int i=0; i<numInPartial; i++) {
         //Copy all data over to collective database
@@ -283,17 +353,17 @@ Collision *mergeCollisionDatabases(Collision *cdb, Collision *partial, int *totC
             cdb[i + *totCollisions].columns[j] = partial[i].columns[j];
         }
     }
-    
+
     //Update collective count of collisions
     *totCollisions += numInPartial;
-    
+
     //Return new pointer to collective collision database
     return cdb;
 }
 
 /*
  cmpfunc
- 
+
  Input; two variables of same datatype
  Performs comparison for sorting function. Returns positive if first value is larger; negative if second value is larger
  */
@@ -302,29 +372,29 @@ int cmpfunc(const void *a, const void *b) {
     long sigA = 0;
     Block ba = *(Block *) a;
     sigA = ba.signature;
-    
+
     //Find value of block b's signature
     long sigB = 0;
     Block bb = *(Block *) b;
     sigB = bb.signature;
-    
+
     //Return comparison
     return sigA - sigB;
 }
 
 /*
  findCollisionsOptimised
- 
+
  input blockDatabase
  Finds all collisions between generated blocks and return collision database; also store number of collisions found. Using sorting method instead of brute force
  */
 Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCollisionsFound) {
     //Sort block database
     qsort(blockDB, numBlocks, sizeof(Block), cmpfunc);
-    
+
     //Set up collision database
     Collision *collisions = (Collision *) malloc(1 * sizeof(Collision));
-    
+
     //Linearly loop through block database, storing collisions as they're found
     int numCollisions = 0;
     long previousSig = blockDB[0].signature;
@@ -343,7 +413,7 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
                 collisions[numCollisions-1].columns = (int *) malloc(sizeof(int) * 5);
                 collisions[numCollisions-1].columns[0] = blockDB[i-1].column;
                 collisions[numCollisions-1].columns[1] = blockDB[i].column;
-                printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
+                //printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
             }
             else {
                 //Increment counter
@@ -352,7 +422,7 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
                 //Store current block's column number, and rellocate collisions column array
                 collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, sizeof(int) * curBlocksInCollision);
                 collisions[numCollisions-1].columns[curBlocksInCollision-1] = blockDB[i].column;
-                printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
+                //printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
             }
         }
         else {
@@ -361,28 +431,28 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
             curBlocksInCollision = 0;
         }
     }
-    
+
     //Return collision database
     return collisions;
 }
 
 /*
  findCollisionsOptimisedParallel
- 
+
  input blockDatabase
  Finds all collisions between generated blocks and return collision database; also store number of collisions found. Using sorting method instead of brute force. Parallelized using tasks
  */
 Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *numberCollisionsFound) {
     //Sort block database
     qsort(blockDB, numBlocks, sizeof(Block), cmpfunc);
-    
+
     //Set up collision database
     Collision *collectiveCollisionDB = (Collision *) malloc(1 * sizeof(Collision));
     int numTotalCollisions = 0;
-    
+
     //Test time spent in critical region
     double timeInCritical = 0;
-    
+
     //Begin parallel region
     omp_set_num_threads(NUM_THREADS);
     #pragma omp parallel
@@ -398,18 +468,18 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
             while(blockDB[finish].signature == blockDB[finish-1].signature) {
                 finish++;
             }
-            
+
             //Generate tasks to find all collisions
             while(start < numBlocks) {
                 //Now create task to find all collisions between start and finish
                 #pragma omp task
                 {
                     //Get thread number
-                    int ID = omp_get_thread_num();
-                    
+                    //int ID = omp_get_thread_num();
+
                     //Set up partial collision database
                     Collision *collisions = (Collision *) malloc(1 * sizeof(Collision));
-                    
+
                     //Linearly loop through block database, storing collisions as they're found
                     int numCollisions = 0;
                     long previousSig = blockDB[start].signature;
@@ -428,7 +498,7 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
                                 collisions[numCollisions-1].columns = (int *) malloc(sizeof(int) * 5);
                                 collisions[numCollisions-1].columns[0] = blockDB[i-1].column;
                                 collisions[numCollisions-1].columns[1] = blockDB[i].column;
-                                printf("Thread %d: Found collision %d on signature %ld with %d blocks in it\n", ID, numCollisions-1, previousSig, curBlocksInCollision);
+                                //printf("Thread %d: Found collision %d on signature %ld with %d blocks in it\n", ID, numCollisions-1, previousSig, curBlocksInCollision);
                             }
                             else {
                                 //Increment counter
@@ -437,7 +507,7 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
                                 //Store current block's column number, and rellocate collisions column array
                                 collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, sizeof(int) * curBlocksInCollision);
                                 collisions[numCollisions-1].columns[curBlocksInCollision-1] = blockDB[i].column;
-                                printf("Thread %d: Found collision %d on signature %ld with %d blocks in it\n", ID, numCollisions-1, previousSig, curBlocksInCollision);
+                                //printf("Thread %d: Found collision %d on signature %ld with %d blocks in it\n", ID, numCollisions-1, previousSig, curBlocksInCollision);
                             }
                         }
                         else {
@@ -447,7 +517,7 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
                         }
                     }
                     //Merge partial collision database with complete collision database
-                    double start = omp_get_wtime();
+                    //double start = omp_get_wtime();
                     #pragma omp critical
                     {
                         collectiveCollisionDB = mergeCollisionDatabases(collectiveCollisionDB, collisions, &numTotalCollisions, numCollisions);
@@ -462,7 +532,7 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
                     }
                     //Free all collisions
                     free(collisions);
-                    
+
                 }
                 //Update indexes to create next task
                 start = finish;
@@ -479,10 +549,10 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
             }
         }
     }
-    
+
     //Print amount of time spent in critical region
 //    printf("%5lf milli-seconds spent in critical region\n", (double) timeInCritical * 1000);
-    
+
     //Return collision database
     return collectiveCollisionDB;
 }
