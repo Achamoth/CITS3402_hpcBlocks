@@ -213,6 +213,9 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
     Collision *collectiveCollisionDB = (Collision *) malloc(1 * sizeof(Collision));
     int numTotalCollisions = 0;
     
+    //Test time spent in critical region
+    double timeInCritical = 0;
+    
     //Begin parallel region
     omp_set_num_threads(NUM_THREADS);
     #pragma omp parallel
@@ -277,10 +280,14 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
                         }
                     }
                     //Merge partial collision database with complete collision database
+                    double start = omp_get_wtime();
                     #pragma omp critical
                     {
                         collectiveCollisionDB = mergeCollisionDatabases(collectiveCollisionDB, collisions, &numTotalCollisions, numCollisions);
                     }
+                    double duration = omp_get_wtime() - start;
+                    #pragma omp atomic
+                    timeInCritical += duration;
                     //Free partial collision database
                     for(int i=0; i<numCollisions; i++) {
                         //Free current collision's column database
@@ -305,6 +312,9 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
             }
         }
     }
+    
+    //Print amount of time spent in critical region
+    printf("%5lf milli-seconds spent in critical region\n", (double) timeInCritical * 1000);
     
     //Return collision database
     return collectiveCollisionDB;
