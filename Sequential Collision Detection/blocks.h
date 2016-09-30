@@ -38,11 +38,8 @@ extern void freeData(double **);
 extern void freeCollisionDB(Collision *, int);
 extern void freeTransposedData(double **);
 extern Block *findBlocks(Block *, double **, long long *, int *);
-extern Block *findBlocksParallel(Block *, double **, long long *, int *);
 extern Collision *findCollisions(Block *, int, int *);
-extern Collision *findCollisionsParallel(Block *, int, int *);
 extern Collision *findCollisionsOptimised(Block *, int, int *);
-extern Collision *findCollisionsOptimisedParallel(Block *, int, int *);
 
 //------------------------------------------------------------------
 // Package accessible variables and definitions

@@ -82,8 +82,25 @@
 </ul>
 </p>
 
-<h3> First attempt at parallelising collision detection </h3>
+<h3> Optimising collision detection </h3>
 <p>
 <ul>
-<li> </li>
+<li> Before beginning parallelisation, I decided to try and improve the efficiency of the base code first. I optimised the code by sorting the block database by signatures, and then progressing linearly through the database creating collisions. This improved complexity from O(n^2) to O(nlogn), and run-time fell from about 40 seconds to a fraction of a second. However, I discovered a small correctness issue, in that blocks from the same column would be marked in a collision </li>
+
+<li> After some more examination and more thought, I discovered that the issue actually doesn’t exist, as no 2 separate blocks within the same column should ever have the same signature. The same signature should only exist between 2 different blocks if the blocks have the same rows (i.e. exactly the same sum of keys). Thus in any one individual column, signatures are entirely unique. This being the case, I now need to discover why the results being returned by the optimised code and those being returned by the brute-force code are different</li>
+
+<li> The error was discovered; a small bug with the brute-force code. So the optimised code and brute-force code now return the same results, but the optimised code runs roughly 2000 times faster </li>
+</ul>
+</p>
+
+<h3> Parallelising collision detection </h3>
+<p>
+<ul>
+<li> I attempted to parallelise collision detection by breaking the linear swoop up into multiple blocks, and creating a task for detecting the collisions in each block. While I managed to get this working, with the correct results, the parallel code actually ran noticeably slower than the sequential code.</li>
+
+<li> Suspecting the critical region (in which the partial collision database that each thread maintains is merged with the collective collision database) to be a factor in the slowdown, I timed the total time spent in the critical region over the course of parallel collision detection. However, over the entirety of the parallel collision detection, which took about <b>310 milli-seconds</b>, only <b>7 milli-seconds</b> were spent in the critical region, meaning is was contributing very little to the overall execution time, and could not have been the main suspect in the slowdown.</li>
+
+<li> I next examined how even the load-balancing was, suspecting this to be a factor. However, by looking at how many collisions each thread found (as each thread would find all collisions within its chunk of the block database), I found them to be roughly equivalent to each other. All threads each individually found between 9500 and 10000 collisions, meaning that the load balancing was actually fairly even, and the threads were each doing comparable amounts of work on the data</li>
+
+<li> Given that the issue was not related to the critical region (i.e. synchronisation) or the load-balancing, it can be concluded that the slowdown is stemming from memory mismanagement, and that the parallel code is likely incurring lots of cache misses. This will be examined in detail very soon </li>
 </ul>
