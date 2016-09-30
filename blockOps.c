@@ -41,6 +41,49 @@ Block *mergeBlockDatabases(Block *completeDB, Block *partialDB, int numBlockInPa
  */
 Block *findBlocks(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
     int nextBlock = 0;
+    //Loop through matrix columns
+    for(int col=0; col<COLS-1; col++) {
+        //Loop through matrix rows
+        for(int row1=0; row1<ROWS; row1++) {
+            for(int row2=row1+1; row2<ROWS; row2++) {
+                //Ensure row1 and row2 are unique
+                if(row2 == row1) continue;
+                //Check if they're in the same neighbourhood
+                if(fabs(mat[col][row1] - mat[col][row2])>DIA) continue;
+                for(int row3=row2+1; row3<ROWS; row3++) {
+                    //Ensure rows 1, 2 and 3 are unique
+                    if(row3 == row2 || row3 == row1) continue;
+                    //Check they're in the same neighbourhood
+                    if(fabs(mat[col][row3]-mat[col][row2])>DIA || fabs(mat[col][row3]-mat[col][row1])>DIA) continue;
+                    for(int row4=row3+1; row4<ROWS; row4++) {
+                        //Ensure all rows are unique
+                        if(row4==row1 || row4==row2 || row4==row3) continue;
+                        //Check they're in the same neighbourhood
+                        if(fabs(mat[col][row4]-mat[col][row1])>DIA || fabs(mat[col][row4]-mat[col][row2])>DIA || fabs(mat[col][row4]-mat[col][row3])>DIA) continue;
+                        //We have found a block, and must store it in the block database
+                        blockDB = (Block *) realloc(blockDB, (nextBlock+1)*sizeof(Block));
+                        blockDB[nextBlock].signature = findSig(row1, row2, row3, row4, kd);
+                        blockDB[nextBlock].column = col;
+                        nextBlock++;
+                        //TEST OUTPUT
+                        printf("Found block at column %d on rows %d, %d, %d, %d\n", col, row1, row2, row3, row4);
+                    }
+                }
+            }
+        }
+    }
+    *numBlocks = nextBlock;
+    return blockDB;
+}
+
+/*
+ findBlocksParallel
+ 
+ input blockDatabase and matrixDatabase
+ Finds all blocks in matrixDatabase and stores them in blockDatabase. Parallelized
+ */
+Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
+    int nextBlock = 0;
     //Loop through matrix columns (excluding last column)
     for(int col=0; col<COLS-1; col++) {
         //Loop through matrix rows in parallel
@@ -63,7 +106,6 @@ Block *findBlocks(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
                             if(fabs(mat[col][row4]-mat[col][row1])>DIA || fabs(mat[col][row4]-mat[col][row2])>DIA || fabs(mat[col][row4]-mat[col][row3])>DIA) continue;
                             //We have found a block, and must store it in the block database
                             partialBlockDB = (Block *) realloc(partialBlockDB, (localNextBlock+1)*sizeof(Block));
-                            //partialBlockDB[localNextBlock] = (Block *) malloc(sizeof(Block));
                             partialBlockDB[localNextBlock].signature = findSig(row1, row2, row3, row4, kd);
                             partialBlockDB[localNextBlock].column = col;
                             localNextBlock++;
@@ -84,15 +126,14 @@ Block *findBlocks(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
     }
     
     *numBlocks = nextBlock;
-    printf("%d\n", *numBlocks);
     return blockDB;
 }
 
 /*
- findCollisions
+ findCollisionsParallel
  
  input blockDatabase
- Finds all collisions between generated blocks and return collision database; also store number of collisions found.
+ Finds all collisions between generated blocks and return collision database; also store number of collisions found. Sequential brute-force code
  */
 Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFound) {
     //Set up collision database
@@ -147,6 +188,78 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
     free(collided);
     *numberCollisionsFound = numCollisions;
     return collisions;
+}
+
+/*
+ findCollisionsParallel
+ 
+ input blockDatabase
+ Finds all collisions between generated blocks and return collision database; also store number of collisions found. Parallelized brute-force code
+ */
+Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberCollisionsFound) {
+    //Set up collision database
+    int totNumCollisions = 0;
+    Collision *collisionsCollective = (Collision *) malloc((totNumCollisions+1) * sizeof(Collision));
+    //Record whether or not block has already been detected in a collision
+//    bool *collided = malloc(sizeof(bool) * numBlocks);
+//    for(int i=0; i<numBlocks; i++) collided[i] = false;
+    omp_set_num_threads(NUM_THREADS);
+    #pragma omp parallel 
+    {
+        //Thread variables
+        int ID = omp_get_thread_num();
+        int nthreads = omp_get_num_threads();
+        //Private partial collision database
+        int numCollisions = 0;
+        Collision *collisions = (Collision *) malloc((numCollisions+1) * sizeof(Collision));
+        
+        //Loop over all blocks
+        for(int i=ID; i<numBlocks; i+=nthreads) {
+            Block curBlock = blockDB[i];
+            long long curSig = curBlock.signature;
+            int curCollisions = 0;
+            //If current block has already been detected in a collision, skip it
+//            if(collided[i]) continue;
+            //Start inner loop to compare to all other blocks
+            for(int j=i+1; j<numBlocks; j++) {
+                Block compBlock = blockDB[j];
+                //Ensure that blocks are not in same column
+                if(curBlock.column == compBlock.column) {
+                    continue;
+                }
+                //Check for collision
+                if(compBlock.signature == curSig) {
+                    //Add block to current collision
+                    if(curCollisions == 0) {
+                        //Allocate memory for collision's column database, and store first column
+                        collisions[numCollisions].columns = (int *) malloc(5 * sizeof(int));
+                        collisions[numCollisions].numBlocksInCollision = 1;
+                        collisions[numCollisions].columns[curCollisions] = curBlock.column;
+                        curCollisions++;
+                        //Allocate more memory for collision database
+                        numCollisions++;
+                        collisions = (Collision *) realloc(collisions, (numCollisions+1)*sizeof(Collision));
+                    }
+                    //Store next block in collision
+//                    collided[j] = true;
+                    collisions[numCollisions-1].numBlocksInCollision += 1;
+                    collisions[numCollisions-1].columns[curCollisions] = compBlock.column;
+                    curCollisions++;
+                    //Allocate more memory for current collision column database
+                    collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, ((curCollisions+1)*sizeof(int)));
+                    
+                    //TEST OUTPUT
+                    printf("Thread %d\t:", ID);
+                    printf("%d %d: ", numCollisions-1, curCollisions);
+                    printf("Found collision at blocks %d and %d. Cols are: %d and %d. Sigs are: %lld and %lld \n", i, j, curBlock.column, collisions[numCollisions-1].columns[curCollisions-1], curSig, compBlock.signature);
+                    
+                }
+            }
+        }
+    }
+//    free(collided);
+//    *numberCollisionsFound = numCollisions;
+    return collisionsCollective;
 }
 
 /*
@@ -206,6 +319,60 @@ int cmpfunc(const void *a, const void *b) {
  Finds all collisions between generated blocks and return collision database; also store number of collisions found. Using sorting method instead of brute force
  */
 Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCollisionsFound) {
+    //Sort block database
+    qsort(blockDB, numBlocks, sizeof(Block), cmpfunc);
+    
+    //Set up collision database
+    Collision *collisions = (Collision *) malloc(1 * sizeof(Collision));
+    
+    //Linearly loop through block database, storing collisions as they're found
+    int numCollisions = 0;
+    long previousSig = blockDB[0].signature;
+    int curBlocksInCollision = 0;
+    for(int i=1; i<numBlocks; i++) {
+        if(blockDB[i].signature == previousSig) {
+            //Collision detected
+            if(curBlocksInCollision == 0) {
+                //New collision. Reallocate more memory for collision database
+                collisions = (Collision *) realloc(collisions, sizeof(Collision) * (numCollisions + 1));
+                //Increment counter
+                numCollisions++;
+                //Store first two blocks of current collision
+                curBlocksInCollision = 2;
+                collisions[numCollisions-1].numBlocksInCollision = 2;
+                collisions[numCollisions-1].columns = (int *) malloc(sizeof(int) * 5);
+                collisions[numCollisions-1].columns[0] = blockDB[i-1].column;
+                collisions[numCollisions-1].columns[1] = blockDB[i].column;
+                printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
+            }
+            else {
+                //Increment counter
+                curBlocksInCollision++;
+                collisions[numCollisions-1].numBlocksInCollision = curBlocksInCollision;
+                //Store current block's column number, and rellocate collisions column array
+                collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, sizeof(int) * curBlocksInCollision);
+                collisions[numCollisions-1].columns[curBlocksInCollision-1] = blockDB[i].column;
+                printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
+            }
+        }
+        else {
+            //No collision between previous block and current block. Record new signature
+            previousSig = blockDB[i].signature;
+            curBlocksInCollision = 0;
+        }
+    }
+    
+    //Return collision database
+    return collisions;
+}
+
+/*
+ findCollisionsOptimisedParallel
+ 
+ input blockDatabase
+ Finds all collisions between generated blocks and return collision database; also store number of collisions found. Using sorting method instead of brute force. Parallelized using tasks
+ */
+Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *numberCollisionsFound) {
     //Sort block database
     qsort(blockDB, numBlocks, sizeof(Block), cmpfunc);
     
@@ -314,7 +481,7 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
     }
     
     //Print amount of time spent in critical region
-    printf("%5lf milli-seconds spent in critical region\n", (double) timeInCritical * 1000);
+//    printf("%5lf milli-seconds spent in critical region\n", (double) timeInCritical * 1000);
     
     //Return collision database
     return collectiveCollisionDB;

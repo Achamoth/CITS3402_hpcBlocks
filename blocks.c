@@ -12,6 +12,10 @@ int main(int argc, char** argv){
 	// Program name without /, cast to constant for file
 	programName = (const char*) strrchr(argv[0], '/') + 1;
     
+    
+    
+    /* READ IN MATRIX DATA AND KEYS */
+    
     //Allocate memory for matrix database
 	double **dataMatrix = (double**)malloc(1*sizeof(double*));
     //Read in matrix, and record number of rows and columns in ROWS and COLS
@@ -26,26 +30,114 @@ int main(int argc, char** argv){
 	// Read in keys
 	readKeys(KEY_FILE, keyDatabase);
     
+    
+    
+    /* THESE VARIABLES ARE FOR TIMING EXECUTION AND RETURNING EXPERIMENTAL RESULTS */
+    double timeForSequentialBlockGeneration = 0;
+    double timeForParallelBlockGeneration = 0;
+    double timeForSequentialBruteForceCollisionDetection = 0;
+    double timeForParallelBruteForceCollisionDetection = 0;
+    double timeForSequentialOptimisedCollisionDetection = 0;
+    double timeForParallelOptimisedCollisionDetection = 0;
+    double startTime;
+    double execTime;
+    
+    
+    
+    /* FIND ALL BLOCKS SEQUENTIALLY USING BRUTE FORCE CODE AND TIME EXECUTION */
+    
     //Create pool of blocks
     Block *blockDatabase = malloc(1*sizeof(Block));;
     
     //Find all blocks in matrix
     int numBlocks = 0;
+    startTime = omp_get_wtime();
     blockDatabase = findBlocks(blockDatabase, transposedData, keyDatabase, &numBlocks);
+    execTime = omp_get_wtime() - startTime;
+    timeForSequentialBlockGeneration = execTime;
+    
+    
+    
+    /* FIND ALL COLLISIONS SEQUENTIALLY USING BRUTE FORCE CODE AND TIME EXECUTION */
     
     //Find all collisions among blocks
-    //int numCollisions = 0;
-    //Collision *collisions = findCollisions(blockDatabase, numBlocks, &numCollisions);
+    int numCollisions = 0;
+    startTime = omp_get_wtime();
+    Collision *collisions = findCollisions(blockDatabase, numBlocks, &numCollisions);
+    execTime = omp_get_wtime() - startTime;
+    timeForSequentialBruteForceCollisionDetection = execTime;
     
-    //Find all collisions again using optimised code
-    double startTime = omp_get_wtime();
-    int numCollisionsOptimised = 0;
-    Collision *collisionsOptimised = findCollisionsOptimised(blockDatabase, numBlocks, &numCollisionsOptimised);
-    double execTime = omp_get_wtime() - startTime;
-    printf("Collision detection took %lf milli-seconds, paralellized\n", (double) execTime*1000);
     
-    //Check for correctness with new optimised code
-    //printf("%d\t%d\n", numCollisions, numCollisionsOptimised);
+    
+    /* FIND ALL BLOCKS IN PARALLEL USING BRUTE FORCE CODE AND TIME EXECUTION */
+    
+    //First free previous block database and reset block counter
+    free(blockDatabase);
+    blockDatabase = malloc(sizeof(Block));
+    numBlocks = 0;
+    
+    //Now, find all blocks using parallel brute force code
+    startTime = omp_get_wtime();
+    blockDatabase = findBlocksParallel(blockDatabase, transposedData, keyDatabase, &numBlocks);
+    execTime = omp_get_wtime() - startTime;
+    timeForParallelBlockGeneration = execTime;
+    
+    
+    
+    /* FIND ALL COLLISIONS IN PARALLEL USING BRUTE FORCE CODE AND TIME EXECUTION */
+    
+    //First, free previous collision database and reset collision counter
+    freeCollisionDB(collisions, numCollisions);
+    numCollisions = 0;
+    
+    //Now, find all collisions using parallel brute force code
+    startTime = omp_get_wtime();
+    collisions = findCollisionsParallel(blockDatabase, numBlocks, &numCollisions);
+    execTime = omp_get_wtime() - startTime;
+    timeForParallelBruteForceCollisionDetection = execTime;
+    
+    
+    
+    /* FIND ALL COLLISIONS SEQUENTIALLY USING OPTIMISED CODE AND TIME EXECUTION */
+    
+    //First, free previous collision database and reset collision counter
+    freeCollisionDB(collisions, numCollisions);
+    numCollisions = 0;
+    
+    //Now, find all collisions using optimised sequential code
+    startTime = omp_get_wtime();
+    collisions = findCollisionsOptimised(blockDatabase, numBlocks, &numCollisions);
+    execTime = omp_get_wtime() - startTime;
+    timeForSequentialOptimisedCollisionDetection = execTime;
+    
+    
+    
+    /* FIND ALL COLLISIONS IN PARALLEL USING OPTIMISED CODE AND TIME EXECUTION */
+    
+    //First, free previous collision database and reset collision counter
+    freeCollisionDB(collisions, numCollisions);
+    numCollisions = 0;
+    
+    //Now, find all collisions using optimised parallel code
+    startTime = omp_get_wtime();
+    collisions = findCollisionsOptimisedParallel(blockDatabase, numBlocks, &numCollisions);
+    execTime = omp_get_wtime() - startTime;
+    timeForParallelOptimisedCollisionDetection = execTime;
+    
+    
+    
+    /* PRINT ALL RESULTS */
+    printf("\n\n\n\n");
+    printf("Sequential brute-force block generation took         %10lf seconds\n", timeForSequentialBlockGeneration);
+    printf("Sequential brute-force collision detection took      %10lf seconds\n", timeForSequentialBruteForceCollisionDetection);
+    printf("Parallel brute-force block generation took           %10lf seconds\n", timeForParallelBlockGeneration);
+    printf("Parallel brute-force collision detection took        %10lf seconds\n", timeForParallelBruteForceCollisionDetection);
+    printf("Sequential optimised collision detection took        %10lf seconds\n", timeForSequentialOptimisedCollisionDetection);
+    printf("Parallel optimised collision detection took          %10lf seconds\n", timeForParallelOptimisedCollisionDetection);
+    
+    
+    
+    /* FINAL MEMORY CLEANUP */
     
     //Free all dynamically allocated memory for key and matrix databases
     freeTransposedData(transposedData);
@@ -53,8 +145,10 @@ int main(int argc, char** argv){
     //Free dynamically allocated memory for block database
     free(blockDatabase);
     //Free dynamically allocated memory for collision database
-    //freeCollisionDB(collisions, numCollisions);
-    freeCollisionDB(collisionsOptimised, numCollisionsOptimised);
-    //Exit program
+    freeCollisionDB(collisions, numCollisions);
+    
+    
+    
+    /* EXIT PROGRAM */
 	return EXIT_SUCCESS;
 }
