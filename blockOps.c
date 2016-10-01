@@ -199,6 +199,74 @@ Block *findBlocksOptimised(Block *blockDB, double **mat, long long *kd, int *num
     return blockDB;
 }
 
+
+/*
+    findBlocksOptimised
+    input blockDatabase and matrixDatabase
+    Finds all blocks in matrixDatabase and stores them in blockDatabase
+    Sequential optimised code
+*/
+Block *findBlocksOptimisedParallel(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
+    int nextBlock = 0;
+    //Loop through matrix columns
+    pair* pairContainer = malloc(ROWS * sizeof(pair));
+    for(int col=0; col< COLS - 1; col++) {
+        // Start parallel region
+        omp_set_num_threads(NUM_THREADS);
+        #pragma omp parallel
+        {
+            // Fill array of pairs, in parallel
+            int row;
+            #pragma omp for private(row)
+            for(row = 0; row < ROWS; ++row){
+                pairContainer[row].value = mat[col][row];
+                pairContainer[row].key = kd[row];
+            }
+            // Sequential sort the entire array in ascending order O(nlgn), single thread
+            #pragma omp single
+            {
+                qsort(pairContainer, ROWS, sizeof(pair), compareDoubles);
+            }
+            
+
+            // Use sliding technique to fill BlockDB
+            // lower bound in array
+            int lower = 0;
+            // Upper bound incrementing is growing the size of the window, default start at 1
+            // Go out of bounds with inclusion of boundary ROWS
+            for(int upper = 1; upper <= ROWS; ++upper){
+                // Check if window contains elements in the same neighbourhood.
+                // If not move the lower bound up till it does or until upper == lower
+                while(pairContainer[upper-1].value - pairContainer[lower].value > DIA){
+                    ++lower;
+                    // Take note that the lower bound i.e. new window instance
+                }
+                // Get all combinations within the window of size 4
+                for(int i = lower; i < upper-1; ++i){
+                    for(int j = i+1; j < upper-1; ++j){
+                        for(int k = j+1; k < upper-1; ++k){
+                            //  Increase memory for the new block pointer to the database
+                            blockDB = (Block *) realloc(blockDB, (nextBlock+1)*sizeof(Block));
+                            blockDB[nextBlock].signature = pairContainer[i].key + pairContainer[j].key + pairContainer[k].key + pairContainer[upper-1].key;
+                            blockDB[nextBlock].column = col;
+                            //  Increment number of blocks
+                            nextBlock++;
+                            // Uncomment to print all rows / indexes being found
+                            //printf("Found block at column %d on rows %lld, %lld, %lld, %lld\n", col, pairContainer[i].key, pairContainer[j].key, pairContainer[k].key, pairContainer[upper-1].key);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Free the utility container
+    *numBlocks = nextBlock;
+    free(pairContainer);
+    //printf("%d\n", *numBlocks);
+    return blockDB;
+}
+
+
 /*
  findCollisionsParallel
 
@@ -288,8 +356,6 @@ Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberColl
             Block curBlock = blockDB[i];
             long long curSig = curBlock.signature;
             int curCollisions = 0;
-            //If current block has already been detected in a collision, skip it
-//            if(collided[i]) continue;
             //Start inner loop to compare to all other blocks
             for(int j=i+1; j<numBlocks; j++) {
                 Block compBlock = blockDB[j];
@@ -311,7 +377,7 @@ Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberColl
                         collisions = (Collision *) realloc(collisions, (numCollisions+1)*sizeof(Collision));
                     }
                     //Store next block in collision
-//                    collided[j] = true;
+                    //collided[j] = true;
                     collisions[numCollisions-1].numBlocksInCollision += 1;
                     collisions[numCollisions-1].columns[curCollisions] = compBlock.column;
                     curCollisions++;
