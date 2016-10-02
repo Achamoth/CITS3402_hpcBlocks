@@ -48,6 +48,7 @@ extern void freeTransposedData(double **);
 extern Block *findBlocks(Block *, double **, long long *, int *);
 extern Block *findBlocksParallel(Block *, double **, long long *, int *);
 extern Block *findBlocksOptimised(Block *, double **, long long *, int *);
+extern Block *findBlocksOptimisedParallel(Block *, double **, long long *, int *);
 extern Collision *findCollisions(Block *, int, int *);
 extern Collision *findCollisionsParallel(Block *, int, int *);
 extern Collision *findCollisionsOptimised(Block *, int, int *);

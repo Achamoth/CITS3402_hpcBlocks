@@ -200,6 +200,71 @@ Block *findBlocksOptimised(Block *blockDB, double **mat, long long *kd, int *num
 }
 
 /*
+ findBlocksOptimisedParallel
+ input blockDatabase and matrixDatabase
+ Finds all blocks in matrixDatabase and stores them in blockDatabase
+ Parallel optimised code
+ */
+Block *findBlocksOptimisedParallel(Block *collectiveBlockDB, double **mat, long long *kd, int *numBlocks) {
+    int numBlocksTotal = 0;
+    //Loop through matrix columns
+    #pragma omp parallel for
+    for(int col=0; col< COLS - 1; col++) {
+        //Thread-private partial block database and counter
+        Block *blockDB = malloc(sizeof(Block));
+        int nextBlock = 0;
+        pair* pairContainer = malloc(ROWS * sizeof(pair));
+        // Create an array of doubles
+        for(int row = 0; row < ROWS; ++row){
+            //tempContainer[row] = mat[row][col];
+            pairContainer[row].value = mat[col][row];
+            pairContainer[row].key = kd[row];
+        }
+        
+        // Use sliding technique to fill BlockDB
+        // lower bound in array
+        int lower = 0;
+        // sort the entire array in ascending order O(nlgn)
+        qsort(pairContainer, ROWS, sizeof(pair), compareDoubles);
+        // Upper bound incrementing is growing the size of the window, default start at 1
+        // Go out of bounds with inclusion of boundary ROWS
+        for(int upper = 1; upper <= ROWS; ++upper){
+            // Check if window contains elements in the same neighbourhood.
+            // If not move the lower bound up till it does or until upper == lower
+            while(pairContainer[upper-1].value - pairContainer[lower].value > DIA){
+                ++lower;
+                // Take note that the lower bound i.e. new window instance
+            }
+            // Get all combinations within the window of size 4
+            for(int i = lower; i < upper-1; ++i){
+                for(int j = i+1; j < upper-1; ++j){
+                    for(int k = j+1; k < upper-1; ++k){
+                        //  Increase memory for the new block pointer to the database
+                        blockDB = (Block *) realloc(blockDB, (nextBlock+1)*sizeof(Block));
+                        blockDB[nextBlock].signature = pairContainer[i].key + pairContainer[j].key + pairContainer[k].key + pairContainer[upper-1].key;
+                        blockDB[nextBlock].column = col;
+                        //  Increment number of blocks
+                        nextBlock++;
+                        // Uncomment to print all rows / indexes being found
+                        //printf("Found block at column %d on rows %lld, %lld, %lld, %lld\n", col, pairContainer[i].key, pairContainer[j].key, pairContainer[k].key, pairContainer[upper-1].key);
+                    }
+                }
+            }
+        }
+        free(pairContainer);
+        //Merge block database with collective block database
+        #pragma omp critical
+        {
+            collectiveBlockDB = mergeBlockDatabases(collectiveBlockDB, blockDB, nextBlock, &numBlocksTotal);
+        }
+    }
+    // Free the utility container
+    *numBlocks = numBlocksTotal;
+    //printf("%d\n", *numBlocks);
+    return collectiveBlockDB;
+}
+
+/*
  findCollisionsParallel
 
  input blockDatabase

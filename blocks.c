@@ -37,6 +37,7 @@ int main(int argc, char** argv){
     double timeForParallelBlockGeneration = 0;
     double timeForSequentialBruteForceCollisionDetection = 0;
 	double timeForSequentialOptimisedBlockGeneration = 0;
+    double timeForParallelOptimisedBlockGeneration = 0;
     double timeForParallelBruteForceCollisionDetection = 0;
     double timeForSequentialOptimisedCollisionDetection = 0;
     double timeForParallelOptimisedCollisionDetection = 0;
@@ -83,6 +84,8 @@ int main(int argc, char** argv){
     execTime = omp_get_wtime() - startTime;
     timeForParallelBlockGeneration = execTime;
 
+    
+    
     /* FIND ALL BLOCKS SEQUENTIALLY USING OPTIMISED CODE AND TIME EXECUTION */
 
 	//First free previous block database and reset block counter
@@ -95,6 +98,22 @@ int main(int argc, char** argv){
     blockDatabase = findBlocksOptimised(blockDatabase, transposedData, keyDatabase, &numBlocks);
     execTime = omp_get_wtime() - startTime;
     timeForSequentialOptimisedBlockGeneration = execTime;
+    
+
+    
+    /* FIND ALL BLOCKS IN PARALLEL USING OPTIMISED CODE AND TIME EXECUTION */
+    
+    //First, free previous block database and reset block counter
+    free(blockDatabase);
+    blockDatabase = malloc(sizeof(Block));
+    numBlocks = 0;
+    
+    //Now, find all blocks using parallel optimised code
+    startTime = omp_get_wtime();
+    blockDatabase = findBlocksOptimisedParallel(blockDatabase, transposedData, keyDatabase, &numBlocks);
+    execTime = omp_get_wtime() - startTime;
+    timeForParallelOptimisedBlockGeneration = execTime;
+    
 
     /* FIND ALL COLLISIONS IN PARALLEL USING BRUTE FORCE CODE AND TIME EXECUTION */
 
@@ -144,12 +163,12 @@ int main(int argc, char** argv){
     printf("Sequential brute-force collision detection took      %10lf seconds\n", timeForSequentialBruteForceCollisionDetection);
     printf("Parallel brute-force block generation took           %10lf seconds\n", timeForParallelBlockGeneration);
 	printf("Sequential optimised block generation took           %10lf seconds\n", timeForSequentialOptimisedBlockGeneration);
+    printf("Parallel optimised block generation took             %10lf seconds\n", timeForParallelOptimisedBlockGeneration);
     printf("Parallel brute-force collision detection took        %10lf seconds\n", timeForParallelBruteForceCollisionDetection);
     printf("Sequential optimised collision detection took        %10lf seconds\n", timeForSequentialOptimisedCollisionDetection);
     printf("Parallel optimised collision detection took          %10lf seconds\n", timeForParallelOptimisedCollisionDetection);
 
-
-
+    
     /* FINAL MEMORY CLEANUP */
 
     //Free all dynamically allocated memory for key and matrix databases
