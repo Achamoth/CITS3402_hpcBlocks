@@ -100,15 +100,15 @@ int main(int argc, char** argv){
     /* FIND ALL BLOCKS IN PARALLEL USING OPTIMISED CODE AND TIME EXECUTION */
 
 	//First free previous block database and reset block counter
-    free(blockDatabase);
-    blockDatabase = malloc(sizeof(Block));
-    numBlocks = 0;
-
-	//Now, find all blocks using sequential optimised code
-    startTime = omp_get_wtime();
-    blockDatabase = findBlocksOptimisedParallel(blockDatabase, transposedData, keyDatabase, &numBlocks);
-    execTime = omp_get_wtime() - startTime;
-    timeForParallelOptimisedBlockGeneration = execTime;
+    // free(blockDatabase);
+    // blockDatabase = malloc(sizeof(Block));
+    // numBlocks = 0;
+	//
+	// //Now, find all blocks using sequential optimised code
+    // startTime = omp_get_wtime();
+    // blockDatabase = findBlocksOptimisedParallel(blockDatabase, transposedData, keyDatabase, &numBlocks);
+    // execTime = omp_get_wtime() - startTime;
+    // timeForParallelOptimisedBlockGeneration = execTime;
 
     /* FIND ALL COLLISIONS IN PARALLEL USING BRUTE FORCE CODE AND TIME EXECUTION */
 

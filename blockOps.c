@@ -153,7 +153,7 @@ Block *findBlocksOptimised(Block *blockDB, double **mat, long long *kd, int *num
     //Loop through matrix columns
     // double* tempContainer = malloc(ROWS * sizeof(double));
     pair* pairContainer = malloc(ROWS * sizeof(pair));
-    for(int col=0; col< COLS - 1; col++) {
+    for(int col=0; col< COLS; col++) {
         // Create an array of doubles
         for(int row = 0; row < ROWS; ++row){
             //tempContainer[row] = mat[row][col];
@@ -227,7 +227,7 @@ Block *findBlocksOptimisedParallel(Block *blockDB, double **mat, long long *kd, 
             {
                 qsort(pairContainer, ROWS, sizeof(pair), compareDoubles);
             }
-            
+
 
             // Use sliding technique to fill BlockDB
             // lower bound in array
