@@ -193,8 +193,8 @@ void freeTransposedData(double **mat) {
 void freeBD(Block *bd, int numBlocks) {
     //Loop through all blocks
     for(int i=0; i<numBlocks; i++) {
-        //Free each block's element database
-        free(bd[i].values);
+        //Free each block's row database
+        free(bd[i].rows);
     }
     //Free block database
     free(bd);
@@ -228,13 +228,13 @@ void printBlock(Block b) {
     //For clean spacing
     printf("\n");
     //First print block's signature and column numbers
-    printf("Signature:          %10lld\n", b.signature);
-    printf("Column:             %10d\n", b.column);
+    printf("Signature:          %16lld\n", b.signature);
+    printf("Column:             %16d\n", b.column);
     //Next, print block's elements
-    printf("Element 1:          %10lf\n", b.values[0]);
-    printf("Element 2:          %10lf\n", b.values[1]);
-    printf("Element 3:          %10lf\n", b.values[2]);
-    printf("Element 4:          %10lf\n", b.values[3]);
+    printf("Row 1:              %16d\n", b.rows[0]);
+    printf("Row 2:              %16d\n", b.rows[1]);
+    printf("Row 3:              %16d\n", b.rows[2]);
+    printf("Row 4:              %16d\n", b.rows[3]);
     //For clean spacing
     printf("\n");
 }

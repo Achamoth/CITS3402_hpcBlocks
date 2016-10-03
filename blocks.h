@@ -17,7 +17,7 @@
 typedef struct Block {
     long long signature;
     int column;
-    double *values;
+    int *rows;
 } Block;
 
 //------------------------------------------------------------------
@@ -35,6 +35,7 @@ typedef struct Collision {
 typedef struct pair{
 	double value;
 	long long key;
+    int row;
 } pair;
 
 //------------------------------------------------------------------
