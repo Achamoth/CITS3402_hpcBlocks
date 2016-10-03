@@ -211,7 +211,30 @@ void freeCollisionDB(Collision *cdb, int numCollisions) {
     for(int i=0; i<numCollisions; i++) {
         //First, free each collision's column database
         free(cdb[i].columns);
+        //Then, free each collision's Block database
+        free(cdb[i].blocks);
     }
     //Now, free database memory
     free(cdb);
+}
+
+/*
+ printBlock
+
+ input Block struct
+ Prints out all elements of block, along with its column number and its signature
+ */
+void printBlock(Block b) {
+    //For clean spacing
+    printf("\n");
+    //First print block's signature and column numbers
+    printf("Signature:          %10lld\n", b.signature);
+    printf("Column:             %10d\n", b.column);
+    //Next, print block's elements
+    printf("Element 1:          %10lf\n", b.values[0]);
+    printf("Element 2:          %10lf\n", b.values[1]);
+    printf("Element 3:          %10lf\n", b.values[2]);
+    printf("Element 4:          %10lf\n", b.values[3]);
+    //For clean spacing
+    printf("\n");
 }

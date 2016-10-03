@@ -26,6 +26,7 @@ typedef struct Block {
 typedef struct Collision {
     int *columns;
     int numBlocksInCollision;
+    Block *blocks;
 } Collision;
 
 //------------------------------------------------------------------
@@ -47,6 +48,7 @@ extern void freeData(double **);
 extern void freeBD(Block *, int);
 extern void freeCollisionDB(Collision *, int);
 extern void freeTransposedData(double **);
+extern void printBlock(Block);
 extern Block *findBlocks(Block *, double **, long long *, int *);
 extern Block *findBlocksParallel(Block *, double **, long long *, int *);
 extern Block *findBlocksOptimised(Block *, double **, long long *, int *);

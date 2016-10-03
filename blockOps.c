@@ -322,6 +322,9 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
                     collisions[numCollisions].columns = (int *) malloc(5 * sizeof(int));
                     collisions[numCollisions].numBlocksInCollision = 1;
                     collisions[numCollisions].columns[curCollisions] = curBlock.column;
+                    //Allocate memory for collision's block database, and store first block
+                    collisions[numCollisions].blocks = (Block *) malloc(2 * sizeof(Block));
+                    collisions[numCollisions].blocks[curCollisions] = curBlock;
                     curCollisions++;
                     //Allocate more memory for collision database
                     numCollisions++;
@@ -331,9 +334,11 @@ Collision *findCollisions(Block *blockDB, int numBlocks, int *numberCollisionsFo
                 collided[j] = true;
                 collisions[numCollisions-1].numBlocksInCollision += 1;
                 collisions[numCollisions-1].columns[curCollisions] = compBlock.column;
+                collisions[numCollisions-1].blocks[curCollisions] = compBlock;
                 curCollisions++;
-                //Allocate more memory for current collision column database
+                //Allocate more memory for current collision's block and column databases
                 collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, ((curCollisions+1)*sizeof(int)));
+                collisions[numCollisions-1].blocks = (Block *) realloc(collisions[numCollisions-1].blocks, (curCollisions+1) * sizeof(Block));
 
                 //TEST OUTPUT
                 //printf("%d %d: ", numCollisions-1, curCollisions);
@@ -392,6 +397,9 @@ Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberColl
                         collisions[numCollisions].columns = (int *) malloc(5 * sizeof(int));
                         collisions[numCollisions].numBlocksInCollision = 1;
                         collisions[numCollisions].columns[curCollisions] = curBlock.column;
+                        //Allocate memory for collision's block database, and store first block
+                        collisions[numCollisions].blocks = (Block *) malloc(2 * sizeof(Block));
+                        collisions[numCollisions].blocks[curCollisions] = curBlock;
                         curCollisions++;
                         //Allocate more memory for collision database
                         numCollisions++;
@@ -401,9 +409,11 @@ Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberColl
 //                    collided[j] = true;
                     collisions[numCollisions-1].numBlocksInCollision += 1;
                     collisions[numCollisions-1].columns[curCollisions] = compBlock.column;
+                    collisions[numCollisions-1].blocks[curCollisions] = compBlock;
                     curCollisions++;
-                    //Allocate more memory for current collision column database
+                    //Allocate more memory for current collision's block and column databases
                     collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, ((curCollisions+1)*sizeof(int)));
+                    collisions[numCollisions-1].blocks = (Block *) realloc(collisions[numCollisions-1].blocks, (curCollisions+1) * sizeof(Block));
 
                     //TEST OUTPUT
                     //printf("Thread %d\t:", ID);
@@ -431,14 +441,17 @@ Collision *mergeCollisionDatabases(Collision *cdb, Collision *partial, int *totC
 
     //Loop over all entries in partial database
     for(int i=0; i<numInPartial; i++) {
-        //Copy all data over to collective database
+        /*//Copy all data over to collective database
         cdb[i + *totCollisions].numBlocksInCollision = partial[i].numBlocksInCollision;
         //Allocate memory for column database
         cdb[i + *totCollisions].columns = (int *) malloc(sizeof(int) * partial[i].numBlocksInCollision);
         //Copy all column entries over
         for(int j=0; j<partial[i].numBlocksInCollision; j++) {
             cdb[i + *totCollisions].columns[j] = partial[i].columns[j];
-        }
+        }*/
+        
+        //Copy collision data over
+        cdb[i + *totCollisions] = partial[i];
     }
 
     //Update collective count of collisions
@@ -498,8 +511,11 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
                 curBlocksInCollision = 2;
                 collisions[numCollisions-1].numBlocksInCollision = 2;
                 collisions[numCollisions-1].columns = (int *) malloc(sizeof(int) * 5);
+                collisions[numCollisions-1].blocks = (Block *) malloc(sizeof(Block) * curBlocksInCollision);
                 collisions[numCollisions-1].columns[0] = blockDB[i-1].column;
                 collisions[numCollisions-1].columns[1] = blockDB[i].column;
+                collisions[numCollisions-1].blocks[0] = blockDB[i-1];
+                collisions[numCollisions-1].blocks[1] = blockDB[i];
                 //printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
             }
             else {
@@ -509,6 +525,9 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
                 //Store current block's column number, and rellocate collisions column array
                 collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, sizeof(int) * curBlocksInCollision);
                 collisions[numCollisions-1].columns[curBlocksInCollision-1] = blockDB[i].column;
+                //Store current block, and reallocate collision's block array
+                collisions[numCollisions-1].blocks = (Block *) realloc(collisions[numCollisions-1].blocks, sizeof(Block) * curBlocksInCollision);
+                collisions[numCollisions-1].blocks[curBlocksInCollision-1] = blockDB[i];
                 //printf("%d: Found collision on signature %ld with %d blocks in it\n", numCollisions-1, previousSig, curBlocksInCollision);
             }
         }
@@ -585,6 +604,9 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
                                 collisions[numCollisions-1].columns = (int *) malloc(sizeof(int) * 5);
                                 collisions[numCollisions-1].columns[0] = blockDB[i-1].column;
                                 collisions[numCollisions-1].columns[1] = blockDB[i].column;
+                                collisions[numCollisions-1].blocks = (Block *) malloc(sizeof(Block) * curBlocksInCollision);
+                                collisions[numCollisions-1].blocks[0] = blockDB[i-1];
+                                collisions[numCollisions-1].blocks[1]= blockDB[i];
                                 //printf("Thread %d: Found collision %d on signature %ld with %d blocks in it\n", ID, numCollisions-1, previousSig, curBlocksInCollision);
                             }
                             else {
@@ -594,6 +616,9 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
                                 //Store current block's column number, and rellocate collisions column array
                                 collisions[numCollisions-1].columns = (int *) realloc(collisions[numCollisions-1].columns, sizeof(int) * curBlocksInCollision);
                                 collisions[numCollisions-1].columns[curBlocksInCollision-1] = blockDB[i].column;
+                                //Store current block, and reallocte collision's block array
+                                collisions[numCollisions-1].blocks = (Block *) realloc(collisions[numCollisions-1].blocks, sizeof(Block) * curBlocksInCollision);
+                                collisions[numCollisions-1].blocks[curBlocksInCollision-1] = blockDB[i];
                                 //printf("Thread %d: Found collision %d on signature %ld with %d blocks in it\n", ID, numCollisions-1, previousSig, curBlocksInCollision);
                             }
                         }
