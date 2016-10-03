@@ -449,7 +449,7 @@ Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberColl
         }
     }
 //    free(collided);
-//    *numberCollisionsFound = numCollisions;
+    *numberCollisionsFound = totNumCollisions;
     return collisionsCollective;
 }
 
@@ -561,6 +561,9 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
             curBlocksInCollision = 0;
         }
     }
+    
+    //Record number of collisions found
+    *numberCollisionsFound = numCollisions;
 
     //Return collision database
     return collisions;
@@ -661,12 +664,7 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
                     double duration = omp_get_wtime() - start;
                     #pragma omp atomic
                     timeInCritical += duration;
-                    //Free partial collision database
-                    for(int i=0; i<numCollisions; i++) {
-                        //Free current collision's column database
-                        free(collisions[i].columns);
-                    }
-                    //Free all collisions
+                    //Free partial collision database (column databases will be freed in freeCollisionDB)
                     free(collisions);
 
                 }
@@ -688,7 +686,10 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
 
     //Print amount of time spent in critical region
 //    printf("%5lf milli-seconds spent in critical region\n", (double) timeInCritical * 1000);
-
+    
+    //Record number of collisions found
+    *numberCollisionsFound = numTotalCollisions;
+    
     //Return collision database
     return collectiveCollisionDB;
 }

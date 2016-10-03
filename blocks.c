@@ -167,8 +167,10 @@ int main(int argc, char** argv){
     printf("Parallel brute-force collision detection took        %10lf seconds\n", timeForParallelBruteForceCollisionDetection);
     printf("Sequential optimised collision detection took        %10lf seconds\n", timeForSequentialOptimisedCollisionDetection);
     printf("Parallel optimised collision detection took          %10lf seconds\n", timeForParallelOptimisedCollisionDetection);
+    printf("%d Blocks, %d Collisions\n", numBlocks, numCollisions);
     printf("\n\n\n\n");
-
+    
+    
 //    //QUICK TEST
 //    printBlock(collisions[0].blocks[0]);
 //    printBlock(collisions[0].blocks[1]);
