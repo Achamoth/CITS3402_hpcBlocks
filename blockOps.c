@@ -34,6 +34,24 @@ Block *mergeBlockDatabases(Block *completeDB, Block *partialDB, int numBlockInPa
 }
 
 /*
+ getBlockValues
+ 
+ input column and four row numbers, and complete data matrix
+ Finds four values corresponding to column number and four row numbers, and returns a double array containing them
+ */
+double *getBlockValues(int c, int r1, int r2, int r3, int r4, double **mat) {
+    //First, allocate memory for element database
+    double *blockElements = (double *) malloc(sizeof(double) * 4);
+    //Now, find four values and store them in database
+    blockElements[0] = mat[c][r1];
+    blockElements[1] = mat[c][r2];
+    blockElements[2] = mat[c][r3];
+    blockElements[3] = mat[c][r4];
+    //Return database
+    return blockElements;
+}
+
+/*
  findBlocks
 
  input blockDatabase and matrixDatabase
@@ -64,6 +82,7 @@ Block *findBlocks(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
                         blockDB = (Block *) realloc(blockDB, (nextBlock+1)*sizeof(Block));
                         blockDB[nextBlock].signature = findSig(row1, row2, row3, row4, kd);
                         blockDB[nextBlock].column = col;
+                        blockDB[nextBlock].values = getBlockValues(col, row1, row2, row3, row4, mat);
                         nextBlock++;
                         //TEST OUTPUT
                         //printf("Found block at column %d on rows %d, %d, %d, %d\n", col, row1, row2, row3, row4);
@@ -108,6 +127,7 @@ Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numB
                             partialBlockDB = (Block *) realloc(partialBlockDB, (localNextBlock+1)*sizeof(Block));
                             partialBlockDB[localNextBlock].signature = findSig(row1, row2, row3, row4, kd);
                             partialBlockDB[localNextBlock].column = col;
+                            partialBlockDB[localNextBlock].values = getBlockValues(col, row1, row2, row3, row4, mat);
                             localNextBlock++;
                             //TEST OUTPUT
                             //printf("Thread %d: Found block at column %d on rows %d, %d, %d, %d\n", ID, col, row1, row2, row3, row4);
@@ -183,6 +203,7 @@ Block *findBlocksOptimised(Block *blockDB, double **mat, long long *kd, int *num
                         blockDB = (Block *) realloc(blockDB, (nextBlock+1)*sizeof(Block));
                         blockDB[nextBlock].signature = pairContainer[i].key + pairContainer[j].key + pairContainer[k].key + pairContainer[upper-1].key;
                         blockDB[nextBlock].column = col;
+                        blockDB[nextBlock].values = getBlockValues(col, i, j, k, upper-1, mat);
                         //  Increment number of blocks
                         nextBlock++;
                         // Uncomment to print all rows / indexes being found
@@ -243,6 +264,7 @@ Block *findBlocksOptimisedParallel(Block *collectiveBlockDB, double **mat, long 
                         blockDB = (Block *) realloc(blockDB, (nextBlock+1)*sizeof(Block));
                         blockDB[nextBlock].signature = pairContainer[i].key + pairContainer[j].key + pairContainer[k].key + pairContainer[upper-1].key;
                         blockDB[nextBlock].column = col;
+                        blockDB[nextBlock].values = getBlockValues(col, i, j, k, upper-1, mat);
                         //  Increment number of blocks
                         nextBlock++;
                         // Uncomment to print all rows / indexes being found

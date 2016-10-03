@@ -190,11 +190,13 @@ void freeTransposedData(double **mat) {
  Frees memory allocated to block database
  
  */
-void freeBD(Block **bd, int numBlocks) {
+void freeBD(Block *bd, int numBlocks) {
     //Loop through all blocks
     for(int i=0; i<numBlocks; i++) {
-        free(bd[i]);
+        //Free each block's element database
+        free(bd[i].values);
     }
+    //Free block database
     free(bd);
 }
 

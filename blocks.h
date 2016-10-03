@@ -17,6 +17,7 @@
 typedef struct Block {
     long long signature;
     int column;
+    double *values;
 } Block;
 
 //------------------------------------------------------------------
@@ -43,6 +44,7 @@ extern void readKeys(char *, long long *);
 extern double **readMatrix(char *, double **);
 extern double **transposeMatrix(double **);
 extern void freeData(double **);
+extern void freeBD(Block *, int);
 extern void freeCollisionDB(Collision *, int);
 extern void freeTransposedData(double **);
 extern Block *findBlocks(Block *, double **, long long *, int *);

@@ -74,7 +74,7 @@ int main(int argc, char** argv){
     /* FIND ALL BLOCKS IN PARALLEL USING BRUTE FORCE CODE AND TIME EXECUTION */
 
     //First free previous block database and reset block counter
-    free(blockDatabase);
+    freeBD(blockDatabase, numBlocks);
     blockDatabase = malloc(sizeof(Block));
     numBlocks = 0;
 
@@ -89,7 +89,7 @@ int main(int argc, char** argv){
     /* FIND ALL BLOCKS SEQUENTIALLY USING OPTIMISED CODE AND TIME EXECUTION */
 
 	//First free previous block database and reset block counter
-    free(blockDatabase);
+    freeBD(blockDatabase, numBlocks);
     blockDatabase = malloc(sizeof(Block));
     numBlocks = 0;
 
@@ -104,7 +104,7 @@ int main(int argc, char** argv){
     /* FIND ALL BLOCKS IN PARALLEL USING OPTIMISED CODE AND TIME EXECUTION */
     
     //First, free previous block database and reset block counter
-    free(blockDatabase);
+    freeBD(blockDatabase,numBlocks);
     blockDatabase = malloc(sizeof(Block));
     numBlocks = 0;
     
