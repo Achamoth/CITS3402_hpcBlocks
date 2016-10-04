@@ -11,7 +11,7 @@ const char* programName;
 int main(int argc, char** argv){
 	// Program name without /, cast to constant for file
 	programName = (const char*) strrchr(argv[0], '/') + 1;
-
+    
 
 
     /* READ IN MATRIX DATA AND KEYS */
@@ -19,6 +19,7 @@ int main(int argc, char** argv){
     //Allocate memory for matrix database
 	double **dataMatrix = (double**)malloc(1*sizeof(double*));
     //Read in matrix, and record number of rows and columns in ROWS and COLS
+    double startTimeForIO = omp_get_wtime();
     dataMatrix = readMatrix(DATA_FILE, dataMatrix);
     //Transpose data matrix
     double **transposedData = transposeMatrix(dataMatrix);
@@ -29,6 +30,7 @@ int main(int argc, char** argv){
 	long long *keyDatabase = malloc(ROWS*sizeof(long long));
 	// Read in keys
 	readKeys(KEY_FILE, keyDatabase);
+    double timeForIO = omp_get_wtime() - startTimeForIO;
 
 
 
@@ -159,6 +161,7 @@ int main(int argc, char** argv){
 
     /* PRINT ALL RESULTS */
     printf("\n\n\n\n");
+    printf("I/O took                                             %10lf seconds\n", timeForIO);
     printf("Sequential brute-force block generation took         %10lf seconds\n", timeForSequentialBlockGeneration);
     printf("Sequential brute-force collision detection took      %10lf seconds\n", timeForSequentialBruteForceCollisionDetection);
     printf("Parallel brute-force block generation took           %10lf seconds\n", timeForParallelBlockGeneration);
