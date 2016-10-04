@@ -47,6 +47,8 @@ int main(int argc, char** argv){
     double execTime;
 
 
+    //Set number of threads for parallel regions
+    omp_set_num_threads(NUM_THREADS);
 
     /* FIND ALL BLOCKS SEQUENTIALLY USING BRUTE FORCE CODE AND TIME EXECUTION */
 
@@ -161,15 +163,19 @@ int main(int argc, char** argv){
 
     /* PRINT ALL RESULTS */
     printf("\n\n\n\n");
-    printf("I/O took                                             %10lf seconds\n", timeForIO);
-    printf("Sequential brute-force block generation took         %10lf seconds\n", timeForSequentialBlockGeneration);
-    printf("Sequential brute-force collision detection took      %10lf seconds\n", timeForSequentialBruteForceCollisionDetection);
-    printf("Parallel brute-force block generation took           %10lf seconds\n", timeForParallelBlockGeneration);
-	printf("Sequential optimised block generation took           %10lf seconds\n", timeForSequentialOptimisedBlockGeneration);
-    printf("Parallel optimised block generation took             %10lf seconds\n", timeForParallelOptimisedBlockGeneration);
-    printf("Parallel brute-force collision detection took        %10lf seconds\n", timeForParallelBruteForceCollisionDetection);
-    printf("Sequential optimised collision detection took        %10lf seconds\n", timeForSequentialOptimisedCollisionDetection);
-    printf("Parallel optimised collision detection took          %10lf seconds\n", timeForParallelOptimisedCollisionDetection);
+    printf("I/O took                                                %10lf seconds\n\n", timeForIO);
+    printf("Sequential brute-force block generation took            %10lf seconds\n", timeForSequentialBlockGeneration);
+    printf("Parallel brute-force block generation took              %10lf seconds\n", timeForParallelBlockGeneration);
+    printf("Speed-up factor on brute-force block generation is      %10lf\n\n", (double) timeForSequentialBlockGeneration/timeForParallelBlockGeneration);
+    printf("Sequential brute-force collision detection took         %10lf seconds\n", timeForSequentialBruteForceCollisionDetection);
+    printf("Parallel brute-force collision detection took           %10lf seconds\n", timeForParallelBruteForceCollisionDetection);
+    printf("Speed-up factor on brute-force collision detection is   %10lf\n\n", (double) timeForSequentialBruteForceCollisionDetection/timeForParallelBruteForceCollisionDetection);
+	printf("Sequential optimised block generation took              %10lf seconds\n", timeForSequentialOptimisedBlockGeneration);
+    printf("Parallel optimised block generation took                %10lf seconds\n", timeForParallelOptimisedBlockGeneration);
+    printf("Speed-up factor on optimised block generation           %10lf\n\n", (double) timeForSequentialOptimisedBlockGeneration / timeForParallelOptimisedBlockGeneration);
+    printf("Sequential optimised collision detection took           %10lf seconds\n", timeForSequentialOptimisedCollisionDetection);
+    printf("Parallel optimised collision detection took             %10lf seconds\n", timeForParallelOptimisedCollisionDetection);
+    printf("Speed-up factor on optimised collision detection is     %10lf\n\n", (double) timeForSequentialOptimisedCollisionDetection / timeForParallelOptimisedCollisionDetection);
     printf("%d Blocks, %d Collisions\n", numBlocks, numCollisions);
     printf("\n\n\n\n");
     

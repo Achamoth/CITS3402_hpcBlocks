@@ -125,7 +125,6 @@ Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numB
     //Loop through matrix columns (excluding last column)
     for(int col=0; col<COLS-1; col++) {
         //Loop through matrix rows in parallel
-        omp_set_num_threads(NUM_THREADS);
         #pragma omp parallel
         {
             Block *partialBlockDB = (Block *) malloc(1 * sizeof(Block));
@@ -389,7 +388,6 @@ Collision *findCollisionsParallel(Block *blockDB, int numBlocks, int *numberColl
     //  Record whether or not block has already been detected in a collision
     //  bool *collided = malloc(sizeof(bool) * numBlocks);
     //  for(int i=0; i<numBlocks; i++) collided[i] = false;
-    omp_set_num_threads(NUM_THREADS);
     #pragma omp parallel
     {
         //Thread variables
@@ -587,7 +585,6 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
     double timeInCritical = 0;
 
     //Begin parallel region
-    omp_set_num_threads(NUM_THREADS);
     #pragma omp parallel
     {
         #pragma omp single
