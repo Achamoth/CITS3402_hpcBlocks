@@ -158,7 +158,14 @@ int main(int argc, char** argv){
     collisions = findCollisionsOptimisedParallel(blockDatabase, numBlocks, &numCollisions);
     execTime = omp_get_wtime() - startTime;
     timeForParallelOptimisedCollisionDetection = execTime;
-
+    
+    
+    /* FIND ALL MERGED COLLISIONS */
+    
+    //Find all merged collisions
+//    int numMerged = 0;
+//    MergedCollision *merged = mergeCollisions(collisions, numCollisions, &numMerged);
+    
 
 
     /* PRINT ALL RESULTS */
@@ -193,6 +200,8 @@ int main(int argc, char** argv){
     free(blockDatabase);
     //Free dynamically allocated memory for collision database
     freeCollisionDB(collisions, numCollisions);
+    //Free dynamically allocated memory for merged collision database
+//    freeMergedDB(merged, numMerged);
 
 
 

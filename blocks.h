@@ -39,6 +39,16 @@ typedef struct pair{
 } pair;
 
 //------------------------------------------------------------------
+//  Struct declaration for merged collisions
+//------------------------------------------------------------------
+typedef struct mergedCollision {
+    int numColumns;
+    int numRows;
+    int *columns;
+    int *rows;
+} MergedCollision;
+
+//------------------------------------------------------------------
 // Package accessible functions
 //------------------------------------------------------------------
 extern void readData(char *, double **);
@@ -49,6 +59,7 @@ extern void freeData(double **);
 extern void freeBD(Block *, int);
 extern void freeCollisionDB(Collision *, int);
 extern void freeTransposedData(double **);
+extern void freeMergedDB(MergedCollision *, int);
 extern void printBlock(Block);
 extern Block *findBlocks(Block *, double **, long long *, int *);
 extern Block *findBlocksParallel(Block *, double **, long long *, int *);
@@ -58,6 +69,7 @@ extern Collision *findCollisions(Block *, int, int *);
 extern Collision *findCollisionsParallel(Block *, int, int *);
 extern Collision *findCollisionsOptimised(Block *, int, int *);
 extern Collision *findCollisionsOptimisedParallel(Block *, int, int *);
+extern MergedCollision* mergeCollisions(Collision *, int, int *);
 
 //------------------------------------------------------------------
 // Package accessible variables and definitions

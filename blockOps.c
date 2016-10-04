@@ -690,3 +690,126 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
     //Return collision database
     return collectiveCollisionDB;
 }
+
+/*
+ getRowSet
+ 
+ Input two Collision structures
+ Output int representing the number of unique row numbers found between the two collisions
+ */
+int *getRowSet(Collision c1, Collision c2, int *numFound) {
+    
+    //Array of rows to return
+    int *rowSet = (int *) malloc(sizeof(int));
+    
+    //Count number of unique values found
+    int numUnique = 0;
+    
+    //Record whether or not a row has already been seen
+    bool found[ROWS];
+    for(int i=0; i<ROWS; i++) {
+        found[i] = false;
+    }
+    
+    //Loop through first collision's rows
+    for(int i=0; i<4; i++) {
+        //Get current row number
+        int curRow = c1.blocks[0].rows[i];
+        //Check if it's been seen
+        if(found[curRow]) {
+            continue;
+        }
+        //If it hasn't, add it to the set
+        rowSet[numUnique] = curRow;
+        //Reallocate rowSet
+        numUnique++;
+        rowSet = (int *) realloc(rowSet, (numUnique+1) * sizeof(int));
+    }
+    
+    //Loop through second collision's rows
+    for(int i=0; i<4; i++) {
+        //Get current row number
+        int curRow = c2.blocks[0].rows[i];
+        //Check if it's been seen
+        if(found[curRow]) {
+            continue;
+        }
+        //If it hasn't, add it to the set
+        rowSet[numUnique] = curRow;
+        //Reallocate rowset
+        numUnique++;
+        rowSet = (int *) realloc(rowSet, (numUnique+1) * sizeof(int));
+    }
+    
+    //Record number found
+    *numFound = numUnique;
+    
+    //Return rowset
+    return rowSet;
+}
+
+
+/*
+ mergeCollisions
+ 
+ Input collision database, number of collisions, and pointer for number of merged collisions found
+ Merge all collisions over same column set, and return array of MergedCollision structures
+ //NEEDS WORK
+ */
+MergedCollision *mergeCollisions(Collision *collisions, int numCollisions, int *numMerged) {
+    //Create database of merged collisions
+    int numFound = 0;
+    MergedCollision *merged = (MergedCollision *) malloc(sizeof(MergedCollision));
+    
+    //Loop through all collisions in collision database
+    for(int i=0; i<numCollisions; i++) {
+        for(int j=i+1; j<numCollisions; j++) {
+            //First check if they have the same number of blocks inside them (if not, the column sets can't be equal)
+            if(collisions[i].numBlocksInCollision != collisions[j].numBlocksInCollision) {
+                continue;
+            }
+            bool columnSetSame = true;
+            //If they are the same, check that all columns in the first are in the second
+            for(int k=0; k<collisions[i].numBlocksInCollision; k++) {
+                //Record current column number of first collision, and whether or not it has been found in second collision
+                int curColumn = collisions[i].columns[k];
+                bool foundInSecond = false;
+                //Now check against all column numbers in second collision
+                for(int k1=0; k1<collisions[j].numBlocksInCollision; k1++) {
+                    if(curColumn == collisions[j].columns[k1]) {
+                        foundInSecond = true;
+                        break;
+                    }
+                }
+                //Now check if the column number was found in the second collision
+                if(!foundInSecond) {
+                    //These collisions don't have the same column set. Continue to next iteration of j's loop
+                    columnSetSame = false;
+                    break;
+                }
+            }
+            if(!columnSetSame) {
+                //Go to next iteration of j's loop
+                continue;
+            }
+            //If we've made it to this point, the collisions have the same column set
+            merged = (MergedCollision *) realloc(merged, sizeof(MergedCollision) * (numFound+1));
+            //Store columns in merged collision database
+            merged[numFound].numColumns = collisions[j].numBlocksInCollision;
+            merged[numFound].columns = (int *) malloc(sizeof(int) * merged[numFound].numColumns);
+            for(int k=0; k<collisions[j].numBlocksInCollision; k++) {
+                merged[numFound].columns[k] = collisions[j].columns[k];
+            }
+            //Store rows in merged collision
+            int numUniqueRows;
+            merged[numFound].rows = getRowSet(collisions[i], collisions[j], &numUniqueRows);
+            merged[numFound].numRows = numUniqueRows;
+            //Increment numFound
+            numFound++;
+        }
+    }
+    //Record number of merged collisions found
+    *numMerged = numFound;
+    //Return merged collision database
+    return merged;
+}

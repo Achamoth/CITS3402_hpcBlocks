@@ -219,6 +219,23 @@ void freeCollisionDB(Collision *cdb, int numCollisions) {
 }
 
 /*
+ freeMergedDB
+ 
+ Input MergedCollision database and number of merged collisions
+ Frees all memory allocated for merged collision database
+ */
+void freeMergedDB(MergedCollision *mdb, int numMerged) {
+    //Loop over all merged collisions
+    for(int i=0; i<numMerged; i++) {
+        //For each merged collision, free the column and row databases
+        free(mdb[i].columns);
+        free(mdb[i].rows);
+    }
+    //Free database
+    free(mdb);
+}
+
+/*
  printBlock
 
  input Block struct
