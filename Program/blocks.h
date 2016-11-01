@@ -71,7 +71,7 @@ extern void freeMergedDB(MergedCollision *, int);
 extern void printBlock(Block);
 extern Block *findBlocks(Block *, double **, long long *, int *);
 extern Block *findBlocksParallel(Block *, double **, long long *, int *, int, int);
-extern Block *findBlocksParallelMPI(Block *, double **, long long *, int *);
+extern Block *findAllBlocksOptimisedMPI(Block *, double **, long long *, int *, int, int);
 extern Block *findBlocksOptimised(Block *, double **, long long *, int *);
 extern Block *findBlocksOptimisedParallel(Block *, double **, long long *, int *);
 extern Collision *findCollisions(Block *, int, int *);

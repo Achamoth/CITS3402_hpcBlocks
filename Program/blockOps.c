@@ -176,93 +176,6 @@ Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numB
     return blockDB;
 }
 
-/*
- findBlocksParallelMPI
-
- input blockDatabase and matrixDatabase
- Finds all blocks in matrixDatabase and stores them in blockDatabase. Parallelized
- */
-Block *findBlocksParallelMPI(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
-    //Create partial block database for each node
-    Block block;
-    
-    //Now, set up MPI struct for block
-    MPI_Datatype BlockType;
-    MPI_Datatype type[3] = {MPI_LONG_LONG_INT, MPI_INT, MPI_INT};
-    int blocklen[3] = {1,1,4};
-    MPI_Aint disp[3];
-    disp[0] = (MPI_Aint) &block.signature - (MPI_Aint) &block;
-    disp[1] = (MPI_Aint) &block.column - (MPI_Aint) disp[0];
-    disp[2] = (MPI_Aint) &block.rows - (MPI_Aint) disp[1];
-    MPI_Type_create_struct(3, blocklen, disp, type, &BlockType);
-    MPI_Type_commit(&BlockType);
-    
-    //Set up MPI struct for data matrix
-//    DataMatrixColumn *columns = malloc(sizeof(DataMatrixColumn));
-    MPI_Datatype MatColumnType;
-    MPI_Datatype colType[3] = {MPI_DOUBLE};
-    int colLen[1] = {4400};
-    MPI_Aint colDisp[1] = {0};
-    MPI_Type_create_struct(1, colLen, colDisp, colType, &MatColumnType);
-    MPI_Type_commit(&MatColumnType);
-    
-    //Initialize MPI
-    MPI_Init(NULL, NULL);
-    
-    //Create partial block database for current node
-    Block *partialBlockDatabase = malloc(sizeof(Block));
-    
-    //Find world size and current rank
-    int commSize;
-    int commRank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &commRank);
-    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
-    
-    if(commSize == 1) {
-        //Just compute using the omp parallel algorithm
-        free(partialBlockDatabase);
-        blockDB = findBlocksParallel(blockDB, mat, kd, numBlocks, 0, COLS);
-        return blockDB;
-    }
-    
-    if(commRank == MASTER && commSize > 1) {
-        /* Master process. This process governs all the others */
-        
-        //First step is to split the data matrix into chunks of columns, using comm size
-        for(int i=1; i<commSize; i++) {
-            //For each process, compute its start and end values (the columns it has to process)
-            int blockSize = COLS / (commSize-1);
-            int start = (i-1) * blockSize;
-            int end = ((i-1) * blockSize) + blockSize;
-            
-            //Send each process its start and end values
-            MPI_Send(&start, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-            MPI_Send(&end, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-        }
-        
-        
-        //Each process will now process its columns, and then send back an array of blocks
-        
-    }
-    
-    else {
-        int start;
-        int end;
-        MPI_Status status;
-        //Master will send start and end values for columns
-        MPI_Recv(&start, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-        MPI_Recv(&end, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-        
-        //Next, this process has to compute all blocks over columns within start and end values
-        
-        
-        //Now, the process will send back the partial blocks that it found
-        
-    }
-    
-    MPI_Finalize();
-    return partialBlockDatabase;
-}
 
 /*
     compareDoubles
@@ -412,6 +325,81 @@ Block *findBlocksOptimisedParallel(Block *collectiveBlockDB, double **mat, long 
     //printf("%d\n", *numBlocks);
     return collectiveBlockDB;
 }
+
+
+
+/*
+ findAllBlocksOptimisedMPI
+ input blockDatabase and matrixDatabase
+ Finds all blocks in matrixDatabase and stores them in blockDatabase
+ Parallel optimised code
+ */
+Block *findAllBlocksOptimisedMPI(Block *collectiveBlockDB, double **mat, long long *kd, int *numBlocks, int start, int end) {
+    int numBlocksTotal = 0;
+    //Loop through matrix columns
+    #pragma omp parallel for
+    for(int col=start; col< end; col++) {
+        //Thread-private partial block database and counter
+        Block *blockDB = malloc(sizeof(Block));
+        int nextBlock = 0;
+        pair* pairContainer = malloc(ROWS * sizeof(pair));
+        // Create an array of doubles
+        for(int row = 0; row < ROWS; ++row){
+            //tempContainer[row] = mat[row][col];
+            pairContainer[row].value = mat[col][row];
+            pairContainer[row].key = kd[row];
+            pairContainer[row].row = row;
+        }
+        
+        // Use sliding technique to fill BlockDB
+        // lower bound in array
+        int lower = 0;
+        // sort the entire array in ascending order O(nlgn)
+        qsort(pairContainer, ROWS, sizeof(pair), compareDoubles);
+        // Upper bound incrementing is growing the size of the window, default start at 1
+        // Go out of bounds with inclusion of boundary ROWS
+        for(int upper = 1; upper <= ROWS; ++upper){
+            // Check if window contains elements in the same neighbourhood.
+            // If not move the lower bound up till it does or until upper == lower
+            while(pairContainer[upper-1].value - pairContainer[lower].value > DIA){
+                ++lower;
+                // Take note that the lower bound i.e. new window instance
+            }
+            // Get all combinations within the window of size 4
+            for(int i = lower; i < upper-1; ++i){
+                for(int j = i+1; j < upper-1; ++j){
+                    for(int k = j+1; k < upper-1; ++k){
+                        //  Increase memory for the new block pointer to the database
+                        blockDB = (Block *) realloc(blockDB, (nextBlock+1)*sizeof(Block));
+                        blockDB[nextBlock].signature = pairContainer[i].key + pairContainer[j].key + pairContainer[k].key + pairContainer[upper-1].key;
+                        blockDB[nextBlock].column = col;
+                        //blockDB[nextBlock].values = getBlockValues(col, i, j, k, upper-1, mat);
+                        //                        blockDB[nextBlock].rows = getRows(pairContainer[i].row, pairContainer[j].row, pairContainer[k].row, pairContainer[upper-1].row);
+                        blockDB[nextBlock].rows[0] = pairContainer[i].row;
+                        blockDB[nextBlock].rows[1] = pairContainer[j].row;
+                        blockDB[nextBlock].rows[2] = pairContainer[k].row;
+                        blockDB[nextBlock].rows[3] = pairContainer[upper-1].row;
+                        //  Increment number of blocks
+                        nextBlock++;
+                        // Uncomment to print all rows / indexes being found
+                        //printf("Found block at column %d on rows %lld, %lld, %lld, %lld\n", col, pairContainer[i].key, pairContainer[j].key, pairContainer[k].key, pairContainer[upper-1].key);
+                    }
+                }
+            }
+        }
+        free(pairContainer);
+        //Merge block database with collective block database
+        #pragma omp critical
+        {
+            collectiveBlockDB = mergeBlockDatabases(collectiveBlockDB, blockDB, nextBlock, &numBlocksTotal);
+        }
+    }
+    // Free the utility container
+    *numBlocks = numBlocksTotal;
+    //printf("%d\n", *numBlocks);
+    return collectiveBlockDB;
+}
+
 
 /*
  findCollisionsParallel
