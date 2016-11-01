@@ -259,6 +259,9 @@ Block *findBlocksParallelMPI(Block *blockDB, double **mat, long long *kd, int *n
         //Now, the process will send back the partial blocks that it found
         
     }
+    
+    MPI_Finalize();
+    return partialBlockDatabase;
 }
 
 /*
