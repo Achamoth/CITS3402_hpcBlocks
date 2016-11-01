@@ -11,10 +11,10 @@ const char* programName;
 int main(int argc, char** argv){
 	// Program name without /, cast to constant for file
 	programName = (const char*) strrchr(argv[0], '/') + 1;
-    
+
     //Time overall execution of program
     double programTimeStart = omp_get_wtime();
-    
+
     /* READ IN MATRIX DATA AND KEYS */
 
     //Allocate memory for matrix database
@@ -90,13 +90,29 @@ int main(int argc, char** argv){
 
     //Now, find all blocks using parallel brute force code
     startTime = omp_get_wtime();
-    blockDatabase = findBlocksParallel(blockDatabase, transposedData, keyDatabase, &numBlocks);
+    blockDatabase = findBlocksParallel(blockDatabase, transposedData, keyDatabase, &numBlocks, 0, COLS);
     execTime = omp_get_wtime() - startTime;
     timeForParallelBlockGeneration = execTime;
     printf("Parallelised brute-force block generation complete\n\n");
+    
+    
+    
+    /* FIND ALL BLOCKS IN PARALLEL USING MPI (BRUTE FORCE CODE) AND TIME EXECUTION */
+    
+    //First, free previous block database and reset block counter
+    printf("Finding all blocks using parallelised (MPI and OMP) brute-force code\n");
+    freeBD(blockDatabase, numBlocks);
+    blockDatabase = malloc(sizeof(Block));
+    numBlocks = 0;
+    
+    blockDatabase = findBlocksParallelMPI(blockDatabase, transposedData, keyDatabase, &numBlocks);
+    
+    
+    
+    
 
-    
-    
+
+
     /* FIND ALL BLOCKS SEQUENTIALLY USING OPTIMISED CODE AND TIME EXECUTION */
 
 	//First free previous block database and reset block counter
@@ -111,24 +127,24 @@ int main(int argc, char** argv){
     execTime = omp_get_wtime() - startTime;
     timeForSequentialOptimisedBlockGeneration = execTime;
     printf("Sequential optimised block generation complete\n\n");
-    
 
-    
+
+
     /* FIND ALL BLOCKS IN PARALLEL USING OPTIMISED CODE AND TIME EXECUTION */
-    
+
     //First, free previous block database and reset block counter
     printf("Finding all blocks using parallelised optimised code\n");
     freeBD(blockDatabase,numBlocks);
     blockDatabase = malloc(sizeof(Block));
     numBlocks = 0;
-    
+
     //Now, find all blocks using parallel optimised code
     startTime = omp_get_wtime();
     blockDatabase = findBlocksOptimisedParallel(blockDatabase, transposedData, keyDatabase, &numBlocks);
     execTime = omp_get_wtime() - startTime;
     timeForParallelOptimisedBlockGeneration = execTime;
     printf("Parallelised optimised block-generation complete\n\n");
-    
+
 
     /* FIND ALL COLLISIONS IN PARALLEL USING BRUTE FORCE CODE AND TIME EXECUTION */
 
@@ -175,17 +191,17 @@ int main(int argc, char** argv){
     execTime = omp_get_wtime() - startTime;
     timeForParallelOptimisedCollisionDetection = execTime;
     printf("Parallelised optimised collision detection complete\n\n");
-    
-    
+
+
     /* FIND ALL MERGED COLLISIONS */
-    
+
     //Find all merged collisions
 //    int numMerged = 0;
 //    MergedCollision *merged = mergeCollisions(collisions, numCollisions, &numMerged);
-    
-    
 
-    
+
+
+
     /* PRINT ALL RESULTS TO RESULTS FILE */
     FILE *resultsOutput = fopen("results.txt", "w");
     if(resultsOutput == NULL) {
@@ -207,7 +223,7 @@ int main(int argc, char** argv){
     fprintf(resultsOutput,"Speed-up factor on optimised collision detection is     %10lf\n\n", (double) timeForSequentialOptimisedCollisionDetection / timeForParallelOptimisedCollisionDetection);
     fprintf(resultsOutput,"%d Blocks, %d Collisions\n", numBlocks, numCollisions);
     fclose(resultsOutput);
-    
+
     /* PRINT ALL COLLISIONS FOUND TO OUTPUT FILE */
     FILE *dataOutput = fopen("output.txt", "w");
     if(dataOutput == NULL) {
@@ -230,15 +246,15 @@ int main(int argc, char** argv){
         fprintf(dataOutput, "\n\n\n\n");
     }
     fclose(dataOutput);
-    
+
     /* Finish program timer and print completion message to screen */
     double programTimeEnd = omp_get_wtime();
     double programTime = programTimeEnd - programTimeStart;
     printf("Program completed execution. Execution took %lf seconds\n", programTime);
     printf("All located collisions printed to \"output.txt\"\n");
     printf("Detailed analysis of execution time and parallelisation speed-up factors printed to \"results.txt\"\n");
-    
-    
+
+
     /* FINAL MEMORY CLEANUP */
 
     //Free all dynamically allocated memory for key and matrix databases
