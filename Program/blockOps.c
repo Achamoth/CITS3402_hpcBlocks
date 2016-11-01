@@ -184,25 +184,25 @@ Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numB
  */
 Block *findBlocksParallelMPI(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
     //Create partial block database for each node
-    Block *block = malloc(sizeof(Block));
+    Block block;
     
     //Now, set up MPI struct for block
     MPI_Datatype BlockType;
     MPI_Datatype type[3] = {MPI_LONG_LONG_INT, MPI_INT, MPI_INT};
     int blocklen[3] = {1,1,4};
     MPI_Aint disp[3];
-    disp[0] = block->signature - partialBlockDatabase;
-    disp[1] = block->column - partialBlockDatabase;
-    disp[2] = block->&rows[0] = partialBlockDatabase;
+    disp[0] = (MPI_Aint) &block.signature - (MPI_Aint) &block;
+    disp[1] = (MPI_Aint) &block.column - (MPI_Aint) disp[0];
+    disp[2] = (MPI_Aint) &block.rows - (MPI_Aint) disp[1];
     MPI_Type_create_struct(3, blocklen, disp, type, &BlockType);
     MPI_Type_commit(&BlockType);
     
     //Set up MPI struct for data matrix
-    DataMatrixColumn *columns = malloc(sizeof(DataMatrixColumn));
+//    DataMatrixColumn *columns = malloc(sizeof(DataMatrixColumn));
     MPI_Datatype MatColumnType;
     MPI_Datatype colType[3] = {MPI_DOUBLE};
     int colLen[1] = {4400};
-    MPI_Aint colDisp[1] = {column->&rows[0] - column};
+    MPI_Aint colDisp[1] = {0};
     MPI_Type_create_struct(1, colLen, colDisp, colType, &MatColumnType);
     MPI_Type_commit(&MatColumnType);
     
@@ -215,8 +215,8 @@ Block *findBlocksParallelMPI(Block *blockDB, double **mat, long long *kd, int *n
     //Find world size and current rank
     int commSize;
     int commRank;
-    MPI_COMM_RANK(MPI_COMM_WORLD, &commRank);
-    MPI_COMM_SIZE(MPI_COMM_WORLD, &commSize);
+    MPI_Comm_rank(MPI_COMM_WORLD, &commRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
     
     if(commSize == 1) {
         //Just compute using the omp parallel algorithm
@@ -236,8 +236,8 @@ Block *findBlocksParallelMPI(Block *blockDB, double **mat, long long *kd, int *n
             int end = ((i-1) * blockSize) + blockSize;
             
             //Send each process its start and end values
-            MPI_SEND(&start, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-            MPI_SEND(&end, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+            MPI_Send(&start, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+            MPI_Send(&end, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
         }
         
         
@@ -248,10 +248,10 @@ Block *findBlocksParallelMPI(Block *blockDB, double **mat, long long *kd, int *n
     else {
         int start;
         int end;
-        int status;
+        MPI_Status status;
         //Master will send start and end values for columns
-        MPI_RECV(&start, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-        MPI_RECV(&end, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(&start, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(&end, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
         
         //Next, this process has to compute all blocks over columns within start and end values
         

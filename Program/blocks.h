@@ -10,7 +10,7 @@
 #include <string.h>
 #include <math.h>
 #include <omp.h>
-#include <mpi.h>
+#include "mpi.h"
 
 //------------------------------------------------------------------
 // Struct declaration for blocks
@@ -26,7 +26,7 @@ typedef struct Block {
 //------------------------------------------------------------------
 typedef struct DataMatrixColumn {
     double rows[4400];
-};
+} DataMatrixColumn;
 
 //------------------------------------------------------------------
 // Struct declaration for collisions
@@ -70,7 +70,8 @@ extern void freeTransposedData(double **);
 extern void freeMergedDB(MergedCollision *, int);
 extern void printBlock(Block);
 extern Block *findBlocks(Block *, double **, long long *, int *);
-extern Block *findBlocksParallel(Block *, double **, long long *, int *);
+extern Block *findBlocksParallel(Block *, double **, long long *, int *, int, int);
+extern Block *findBlocksParallelMPI(Block *, double **, long long *, int *);
 extern Block *findBlocksOptimised(Block *, double **, long long *, int *);
 extern Block *findBlocksOptimisedParallel(Block *, double **, long long *, int *);
 extern Collision *findCollisions(Block *, int, int *);
