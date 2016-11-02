@@ -347,7 +347,9 @@ int main(int argc, char** argv){
     
     /* PRINT ALL RESULTS TO RESULTS FILE (ONLY MASTER DOES THIS) */
     if(commRank == 0) {
-        FILE *resultsOutput = fopen("results.txt", "w");
+        char output[100];
+        sprintf(output, "results%d.txt", commSize);
+        FILE *resultsOutput = fopen(output, "w");
         if(resultsOutput == NULL) {
             fprintf(stderr, "Error. Can't create file \"results.txt\" to print results to\n");
             exit(EXIT_FAILURE);
