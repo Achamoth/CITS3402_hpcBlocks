@@ -89,10 +89,6 @@ int main(int argc, char** argv){
     }
     numBlocks = 0;
     
-    //VARIABLES FOR SLAVE PROCESSES (will be used later in code, so they're not declared  inside slave region)
-    Block *partialBlockDatabase;
-    int numBlocksPartial;
-    
     if(commRank == 0) {
         /* MASTER PROCESS*/
         printf("Finding all blocks using MPI optimised code\n");
@@ -139,11 +135,10 @@ int main(int argc, char** argv){
         if(end > COLS) end = COLS-1;
         
         //The number of blocks this process finds
-        numBlocksPartial = 0;
+        int numBlocksPartial = 0;
         
         //Now, find all blocks between these columns
-        
-        partialBlockDatabase = (Block *) malloc(sizeof(Block));
+        Block *partialBlockDatabase = (Block *) malloc(sizeof(Block));
         partialBlockDatabase = findAllBlocksOptimisedMPI(partialBlockDatabase, transposedData, keyDatabase, &numBlocksPartial, start, end);
         
         //Send all located blocks back to master. First send number of blocks found
@@ -182,7 +177,7 @@ int main(int argc, char** argv){
     //First, free previous collision database and reset collision counter
     if(commRank == 0) {
         printf("Finding all collisions using sequential optimised code\n");
-        int numCollisions = 0;
+        numCollisions = 0;
         
         //Now, find all collisions using optimised sequential code
         startTime = omp_get_wtime();
@@ -221,9 +216,34 @@ int main(int argc, char** argv){
     
     if(commRank == 0) {
         /* MASTER PROCESS */
+        printf("Finding all collisions using MPI optimised collision detection\n");
         startTime = omp_get_wtime();
         collisions = malloc(sizeof(Collision));
         numCollisions = 0;
+        
+        //Master sorts the full block database
+        qsort(blockDatabase, numBlocks, sizeof(Block), cmpfunc);
+        
+        //Master sends to each slave the number of blocks it needs to find collisions over, and the blocks themselves
+        for(int i=1; i<commSize; i++) {
+            //Calculate start and end values, and slave's chunk size
+            int chunkSize = numBlocks / (commSize-1);
+            int start = (i-1) * chunkSize;
+            int end = start + chunkSize;
+            if(end > numBlocks) end = numBlocks;
+            int curChunk = end-start;
+            
+            MPI_Send(&curChunk, 1, MPI_INT, i, 123, MPI_COMM_WORLD);
+            
+            //Send all blocks the slave needs for its computation
+            for(int j=start; j<end; j++) {
+                //Send block's signature, column, and row array
+                MPI_Send(&blockDatabase[j].signature, 1, MPI_LONG_LONG_INT, i, 123, MPI_COMM_WORLD);
+                MPI_Send(&blockDatabase[j].column, 1, MPI_INT, i, 123, MPI_COMM_WORLD);
+                MPI_Send(blockDatabase[j].rows, 4, MPI_INT, i, 123, MPI_COMM_WORLD);
+            }
+        }
+        
         
         //All slave processes will compute their collisions, and send them back
         for(int i=1; i<commSize; i++) {
@@ -272,6 +292,33 @@ int main(int argc, char** argv){
     
     else {
         /* SLAVE PROCESS */
+        Block *partialBlockDatabase;
+        int numBlocksPartial;
+        MPI_Status status;
+        
+        //Receive number of blocks I'm responsible for
+        MPI_Recv(&numBlocksPartial, 1, MPI_INT, 0, 123, MPI_COMM_WORLD, &status);
+        
+        //Receive all blocks I'm responsible for
+        partialBlockDatabase = (Block *) malloc(sizeof(Block) * numBlocksPartial);
+        for(int j=0; j<numBlocksPartial; j++) {
+            long sig;
+            int col;
+            int rows[4];
+            
+            MPI_Recv(&sig, 1, MPI_LONG_LONG_INT, 0, 123, MPI_COMM_WORLD, &status);
+            MPI_Recv(&col, 1, MPI_INT, 0, 123, MPI_COMM_WORLD, &status);
+            MPI_Recv(rows, 4, MPI_INT, 0, 123, MPI_COMM_WORLD, &status);
+            
+            //Store in partial block database
+            partialBlockDatabase[j].signature = sig;
+            partialBlockDatabase[j].column = col;
+            partialBlockDatabase[j].rows[0] = rows[0];
+            partialBlockDatabase[j].rows[1] = rows[1];
+            partialBlockDatabase[j].rows[2] = rows[2];
+            partialBlockDatabase[j++].rows[3] = rows[3];
+        }
+        
         //First, find all the collisions I'm responsible for
         int numPartialCollisions;
         Collision *partialCollisionDatabase = findCollisionsOptimisedParallel(partialBlockDatabase, numBlocksPartial, &numPartialCollisions);

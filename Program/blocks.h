@@ -79,6 +79,7 @@ extern Collision *findCollisionsParallel(Block *, int, int *);
 extern Collision *findCollisionsOptimised(Block *, int, int *);
 extern Collision *findCollisionsOptimisedParallel(Block *, int, int *);
 extern MergedCollision* mergeCollisions(Collision *, int, int *);
+extern int cmpfunc(const void *, const void *);
 
 //------------------------------------------------------------------
 // Package accessible variables and definitions
