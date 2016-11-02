@@ -1,0 +1,15 @@
+I/O took                                                     1.317279 seconds
+
+Sequential optimised block generation took                   0.590206 seconds
+Openmp optimised block generation took                       0.140083 seconds
+MPI optimised block generation took                          0.410133 seconds
+Speed-up factor on optimised block generation with omp       4.213270
+Speed-up factor on optimised block generation with MPI       0.341554
+
+Sequential optimised collision detection took                0.101542 seconds
+Parallel optimised collision detection took                  0.050866 seconds
+MPI optimised collision detection took                       0.789714 seconds
+Speed-up factor on openmp optimised collision detection is   1.996275
+Speed-up factor on MPI optimisied collision detection is     0.064411
+
+243496 Blocks, 30117 Collisions
