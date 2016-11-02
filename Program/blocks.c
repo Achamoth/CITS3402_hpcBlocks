@@ -89,13 +89,17 @@ int main(int argc, char** argv){
     }
     numBlocks = 0;
     
+    //VARIABLES FOR SLAVE PROCESSES (will be used later in code, so they're not declared  inside slave region)
+    Block *partialBlockDatabase;
+    int numBlocksPartial;
+    
     if(commRank == 0) {
         /* MASTER PROCESS*/
         printf("Finding all blocks using MPI optimised code\n");
         startTime = omp_get_wtime();
         blockDatabase = malloc(sizeof(Block));
 
-        //Master process. For all slave processes, compute their start and end values (for columns), and send them to the slave
+        //Master process. All slave processes will perform their work and send their results
         for(int i=1; i<commSize; i++) {
             //The process will send back an array of blocks that it found between its columns. It will first send back the number of blocks it found
             int numBlocksPartial;
@@ -125,10 +129,6 @@ int main(int argc, char** argv){
         execTime = omp_get_wtime() - startTime;
         timeForMPIOptimisedBlockGeneration = execTime;
         printf("MPI optimised block generation complete\n\n");
-        printf("%d\n", numBlocks);
-        for(int k=0; k<numBlocks; k++) {
-            printf("Block %d: Sig: %lld Rows: %d %d %d %d\n", k, blockDatabase[k].signature, blockDatabase[k].rows[0], blockDatabase[k].rows[1], blockDatabase[k].rows[2], blockDatabase[k].rows[3]);
-        }
     }
     
     else {
@@ -139,11 +139,11 @@ int main(int argc, char** argv){
         if(end > COLS) end = COLS-1;
         
         //The number of blocks this process finds
-        int numBlocksPartial = 0;
+        numBlocksPartial = 0;
         
         //Now, find all blocks between these columns
         
-        Block *partialBlockDatabase = (Block *) malloc(sizeof(Block));
+        partialBlockDatabase = (Block *) malloc(sizeof(Block));
         partialBlockDatabase = findAllBlocksOptimisedMPI(partialBlockDatabase, transposedData, keyDatabase, &numBlocksPartial, start, end);
         
         //Send all located blocks back to master. First send number of blocks found
@@ -154,9 +154,6 @@ int main(int argc, char** argv){
             MPI_Send(&partialBlockDatabase[j].column, 1, MPI_INT, 0, 123, MPI_COMM_WORLD);
             MPI_Send(partialBlockDatabase[j].rows, 4, MPI_INT, 0, 123, MPI_COMM_WORLD);
         }
-        
-        //Free partial block database
-        free(partialBlockDatabase);
     }
     
     
@@ -216,7 +213,88 @@ int main(int argc, char** argv){
     
     
     /* FIND ALL COLLISIONS IN PARALLEL USING MPI AND TIME EXECUTION */
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(commRank == 0) {
+        freeCollisionDB(collisions, numCollisions);
+    }
+    numCollisions = 0;
     
+    if(commRank == 0) {
+        /* MASTER PROCESS */
+        startTime = omp_get_wtime();
+        collisions = malloc(sizeof(Collision));
+        numCollisions = 0;
+        
+        //All slave processes will compute their collisions, and send them back
+        for(int i=1; i<commSize; i++) {
+            //First, they will send the number of collisions they found
+            int numCollisionsFoundBySlave;
+            MPI_Status status;
+            MPI_Recv(&numCollisionsFoundBySlave, 1, MPI_INT, i, 123, MPI_COMM_WORLD, &status);
+            
+            //Now, they will send all collisions
+            for(int j=0; j<numCollisionsFoundBySlave; j++) {
+                //Reallocate memory for collision database
+                collisions = (Collision *) realloc(collisions, sizeof(Collision) * (numCollisions + 1));
+                //The slave will start by sending the number of blocks found in the collision
+                int numBlocksFound;
+                MPI_Recv(&numBlocksFound, 1, MPI_INT, i, 123, MPI_COMM_WORLD, &status);
+                collisions[numCollisions].numBlocksInCollision = numBlocksFound;
+                collisions[numCollisions].columns = (int *) malloc(sizeof(int) * numBlocksFound);
+                collisions[numCollisions].blocks = (Block *) malloc(sizeof(Block) * numBlocksFound);
+                //For each block, the slave will send the block's details
+                for(int k=0; k<numBlocksFound; k++) {
+                    int curColumn;
+                    long long curSig;
+                    int curRows[4];
+                    MPI_Recv(&curColumn, 1, MPI_INT, i, 123, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&curSig, 1, MPI_LONG_LONG_INT, i, 123, MPI_COMM_WORLD, &status);
+                    MPI_Recv(curRows, 4, MPI_INT, i, 123, MPI_COMM_WORLD, &status);
+                    
+                    //Store the current column number in the collision
+                    collisions[numCollisions].columns[k] = curColumn;
+                    //Store the current block details
+                    collisions[numCollisions].blocks[k].signature = curSig;
+                    collisions[numCollisions].blocks[k].column = curColumn;
+                    collisions[numCollisions].blocks[k].rows[0] = curRows[0];
+                    collisions[numCollisions].blocks[k].rows[1] = curRows[1];
+                    collisions[numCollisions].blocks[k].rows[2] = curRows[2];
+                    collisions[numCollisions].blocks[k].rows[3] = curRows[3];
+                }
+                numCollisions++;
+            }
+        }
+        //Record execution time
+        execTime = omp_get_wtime() - startTime;
+        timeForMPIOptimisedCollisionDetection = execTime;
+        printf("MPI Optimised collision detection complete\n\n");
+    }
+    
+    else {
+        /* SLAVE PROCESS */
+        //First, find all the collisions I'm responsible for
+        int numPartialCollisions;
+        Collision *partialCollisionDatabase = findCollisionsOptimisedParallel(partialBlockDatabase, numBlocksPartial, &numPartialCollisions);
+        
+        //Now, send to master how many collisions I found
+        MPI_Send(&numPartialCollisions, 1, MPI_INT, 0, 123, MPI_COMM_WORLD);
+        //Now, send each collision's details
+        for(int j=0; j<numPartialCollisions; j++) {
+            //Send the number of blocks found in this collision
+            MPI_Send(&partialCollisionDatabase[j].numBlocksInCollision, 1, MPI_INT, 0, 123, MPI_COMM_WORLD);
+            //For each block, send its details
+            for(int k=0; k<partialCollisionDatabase[j].numBlocksInCollision; k++) {
+                //Send column number first
+                MPI_Send(&partialCollisionDatabase[j].columns[k], 1, MPI_INT, 0, 123, MPI_COMM_WORLD);
+                //Send the block's signature and rows
+                MPI_Send(&partialCollisionDatabase[j].blocks[k].signature, 1, MPI_LONG_LONG_INT, 0, 123, MPI_COMM_WORLD);
+                MPI_Send(partialCollisionDatabase[j].blocks[k].rows, 4, MPI_INT, 0, 123, MPI_COMM_WORLD);
+            }
+        }
+        //Now, free all memory for partial databases
+        free(partialBlockDatabase);
+        freeCollisionDB(partialCollisionDatabase, numPartialCollisions);
+    }
     
     
     
@@ -230,11 +308,12 @@ int main(int argc, char** argv){
         fprintf(resultsOutput,"I/O took                                                   %10lf seconds\n\n", timeForIO);
         fprintf(resultsOutput,"Sequential optimised block generation took                 %10lf seconds\n", timeForSequentialOptimisedBlockGeneration);
         fprintf(resultsOutput,"Openmp optimised block generation took                     %10lf seconds\n", timeForParallelOptimisedBlockGeneration);
-        fprintf(resultsOutput, "MPI optimised block generation took                       %10lf seconds\n", timeForMPIOptimisedBlockGeneration);
+        fprintf(resultsOutput,"MPI optimised block generation took                        %10lf seconds\n", timeForMPIOptimisedBlockGeneration);
         fprintf(resultsOutput,"Speed-up factor on optimised block generation with omp     %10lf\n", (double) timeForSequentialOptimisedBlockGeneration / timeForParallelOptimisedBlockGeneration);
         fprintf(resultsOutput,"Speed-up factor on optimised block generation with MPI     %10lf\n\n", (double) timeForParallelOptimisedBlockGeneration / timeForMPIOptimisedBlockGeneration);
         fprintf(resultsOutput,"Sequential optimised collision detection took              %10lf seconds\n", timeForSequentialOptimisedCollisionDetection);
         fprintf(resultsOutput,"Parallel optimised collision detection took                %10lf seconds\n", timeForParallelOptimisedCollisionDetection);
+        fprintf(resultsOutput,"MPI optimised collision detection took                     %10lf seconds\n", timeForMPIOptimisedCollisionDetection);
         fprintf(resultsOutput,"Speed-up factor on openmp optimised collision detection is %10lf\n", (double) timeForSequentialOptimisedCollisionDetection / timeForParallelOptimisedCollisionDetection);
         fprintf(resultsOutput,"Speed-up factor on MPI optimisied collision detection is   %10lf\n\n", (double) timeForParallelOptimisedCollisionDetection / timeForMPIOptimisedCollisionDetection);
         fprintf(resultsOutput,"%d Blocks, %d Collisions\n", numBlocks, numCollisions);
