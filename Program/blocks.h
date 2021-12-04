@@ -10,6 +10,7 @@
 #include <string.h>
 #include <math.h>
 #include <omp.h>
+#include "mpi.h"
 
 //------------------------------------------------------------------
 // Struct declaration for blocks
@@ -17,8 +18,15 @@
 typedef struct Block {
     long long signature;
     int column;
-    int *rows;
+    int rows[4];
 } Block;
+
+//------------------------------------------------------------------
+// Struct declaration for data matrix
+//------------------------------------------------------------------
+typedef struct DataMatrixColumn {
+    double rows[4400];
+} DataMatrixColumn;
 
 //------------------------------------------------------------------
 // Struct declaration for collisions
@@ -62,7 +70,8 @@ extern void freeTransposedData(double **);
 extern void freeMergedDB(MergedCollision *, int);
 extern void printBlock(Block);
 extern Block *findBlocks(Block *, double **, long long *, int *);
-extern Block *findBlocksParallel(Block *, double **, long long *, int *);
+extern Block *findBlocksParallel(Block *, double **, long long *, int *, int, int);
+extern Block *findAllBlocksOptimisedMPI(Block *, double **, long long *, int *, int, int);
 extern Block *findBlocksOptimised(Block *, double **, long long *, int *);
 extern Block *findBlocksOptimisedParallel(Block *, double **, long long *, int *);
 extern Collision *findCollisions(Block *, int, int *);
@@ -70,6 +79,7 @@ extern Collision *findCollisionsParallel(Block *, int, int *);
 extern Collision *findCollisionsOptimised(Block *, int, int *);
 extern Collision *findCollisionsOptimisedParallel(Block *, int, int *);
 extern MergedCollision* mergeCollisions(Collision *, int, int *);
+extern int cmpfunc(const void *, const void *);
 
 //------------------------------------------------------------------
 // Package accessible variables and definitions
@@ -78,6 +88,7 @@ extern MergedCollision* mergeCollisions(Collision *, int, int *);
 #define KEY_FILE "keys.txt"
 #define DIA 0.0000025
 #define NUM_THREADS 4
+#define MASTER 0
 extern const char* programName;
 extern int ROWS;
 extern int COLS;

@@ -194,7 +194,7 @@ void freeBD(Block *bd, int numBlocks) {
     //Loop through all blocks
     for(int i=0; i<numBlocks; i++) {
         //Free each block's row database
-        free(bd[i].rows);
+//        free(bd[i].rows);
     }
     //Free block database
     free(bd);

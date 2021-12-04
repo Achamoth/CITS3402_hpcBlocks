@@ -35,7 +35,7 @@ Block *mergeBlockDatabases(Block *completeDB, Block *partialDB, int numBlockInPa
 
 /*
  getBlockValues
- 
+
  input column and four row numbers, and complete data matrix
  Finds four values corresponding to column number and four row numbers, and returns a double array containing them
  */
@@ -53,7 +53,7 @@ double *getBlockValues(int c, int r1, int r2, int r3, int r4, double **mat) {
 
 /*
  getRows
- 
+
  input four row values
  Returns dynamically allocated int array consisting of four row values
  */
@@ -101,7 +101,11 @@ Block *findBlocks(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
                         blockDB[nextBlock].signature = findSig(row1, row2, row3, row4, kd);
                         blockDB[nextBlock].column = col;
                         //blockDB[nextBlock].values = getBlockValues(col, row1, row2, row3, row4, mat);
-                        blockDB[nextBlock].rows = getRows(row1, row2, row3, row4);
+//                        blockDB[nextBlock].rows = getRows(row1, row2, row3, row4);
+                        blockDB[nextBlock].rows[0] = row1;
+                        blockDB[nextBlock].rows[1] = row2;
+                        blockDB[nextBlock].rows[2] = row3;
+                        blockDB[nextBlock].rows[3] = row4;
                         nextBlock++;
                         //TEST OUTPUT
                         //printf("Found block at column %d on rows %d, %d, %d, %d\n", col, row1, row2, row3, row4);
@@ -120,10 +124,10 @@ Block *findBlocks(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
  input blockDatabase and matrixDatabase
  Finds all blocks in matrixDatabase and stores them in blockDatabase. Parallelized
  */
-Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numBlocks) {
+Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numBlocks, int start, int end) {
     int nextBlock = 0;
     //Loop through matrix columns (excluding last column)
-    for(int col=0; col<COLS-1; col++) {
+    for(int col=start; col<end; col++) {
         //Loop through matrix rows in parallel
         #pragma omp parallel
         {
@@ -146,7 +150,11 @@ Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numB
                             partialBlockDB[localNextBlock].signature = findSig(row1, row2, row3, row4, kd);
                             partialBlockDB[localNextBlock].column = col;
                             //partialBlockDB[localNextBlock].values = getBlockValues(col, row1, row2, row3, row4, mat);
-                            partialBlockDB[localNextBlock].rows = getRows(row1, row2, row3, row4);
+//                            partialBlockDB[localNextBlock].rows = getRows(row1, row2, row3, row4);
+                            partialBlockDB[localNextBlock].rows[0] = row1;
+                            partialBlockDB[localNextBlock].rows[1] = row2;
+                            partialBlockDB[localNextBlock].rows[2] = row3;
+                            partialBlockDB[localNextBlock].rows[3] = row4;
                             localNextBlock++;
                             //TEST OUTPUT
                             //printf("Thread %d: Found block at column %d on rows %d, %d, %d, %d\n", ID, col, row1, row2, row3, row4);
@@ -167,6 +175,7 @@ Block *findBlocksParallel(Block *blockDB, double **mat, long long *kd, int *numB
     *numBlocks = nextBlock;
     return blockDB;
 }
+
 
 /*
     compareDoubles
@@ -224,7 +233,11 @@ Block *findBlocksOptimised(Block *blockDB, double **mat, long long *kd, int *num
                         blockDB[nextBlock].signature = pairContainer[i].key + pairContainer[j].key + pairContainer[k].key + pairContainer[upper-1].key;
                         blockDB[nextBlock].column = col;
                         //blockDB[nextBlock].values = getBlockValues(col, i, j, k, upper-1, mat);
-                        blockDB[nextBlock].rows = getRows(pairContainer[i].row, pairContainer[j].row, pairContainer[k].row, pairContainer[upper-1].row);
+//                        blockDB[nextBlock].rows = getRows(pairContainer[i].row, pairContainer[j].row, pairContainer[k].row, pairContainer[upper-1].row);
+                        blockDB[nextBlock].rows[0] = pairContainer[i].row;
+                        blockDB[nextBlock].rows[1] = pairContainer[j].row;
+                        blockDB[nextBlock].rows[2] = pairContainer[k].row;
+                        blockDB[nextBlock].rows[3] = pairContainer[upper-1].row;
                         //  Increment number of blocks
                         nextBlock++;
                         // Uncomment to print all rows / indexes being found
@@ -263,6 +276,80 @@ Block *findBlocksOptimisedParallel(Block *collectiveBlockDB, double **mat, long 
             pairContainer[row].key = kd[row];
             pairContainer[row].row = row;
         }
+
+        // Use sliding technique to fill BlockDB
+        // lower bound in array
+        int lower = 0;
+        // sort the entire array in ascending order O(nlgn)
+        qsort(pairContainer, ROWS, sizeof(pair), compareDoubles);
+        // Upper bound incrementing is growing the size of the window, default start at 1
+        // Go out of bounds with inclusion of boundary ROWS
+        for(int upper = 1; upper <= ROWS; ++upper){
+            // Check if window contains elements in the same neighbourhood.
+            // If not move the lower bound up till it does or until upper == lower
+            while(pairContainer[upper-1].value - pairContainer[lower].value > DIA){
+                ++lower;
+                // Take note that the lower bound i.e. new window instance
+            }
+            // Get all combinations within the window of size 4
+            for(int i = lower; i < upper-1; ++i){
+                for(int j = i+1; j < upper-1; ++j){
+                    for(int k = j+1; k < upper-1; ++k){
+                        //  Increase memory for the new block pointer to the database
+                        blockDB = (Block *) realloc(blockDB, (nextBlock+1)*sizeof(Block));
+                        blockDB[nextBlock].signature = pairContainer[i].key + pairContainer[j].key + pairContainer[k].key + pairContainer[upper-1].key;
+                        blockDB[nextBlock].column = col;
+                        //blockDB[nextBlock].values = getBlockValues(col, i, j, k, upper-1, mat);
+//                        blockDB[nextBlock].rows = getRows(pairContainer[i].row, pairContainer[j].row, pairContainer[k].row, pairContainer[upper-1].row);
+                        blockDB[nextBlock].rows[0] = pairContainer[i].row;
+                        blockDB[nextBlock].rows[1] = pairContainer[j].row;
+                        blockDB[nextBlock].rows[2] = pairContainer[k].row;
+                        blockDB[nextBlock].rows[3] = pairContainer[upper-1].row;
+                        //  Increment number of blocks
+                        nextBlock++;
+                        // Uncomment to print all rows / indexes being found
+                        //printf("Found block at column %d on rows %lld, %lld, %lld, %lld\n", col, pairContainer[i].key, pairContainer[j].key, pairContainer[k].key, pairContainer[upper-1].key);
+                    }
+                }
+            }
+        }
+        free(pairContainer);
+        //Merge block database with collective block database
+        #pragma omp critical
+        {
+            collectiveBlockDB = mergeBlockDatabases(collectiveBlockDB, blockDB, nextBlock, &numBlocksTotal);
+        }
+    }
+    // Free the utility container
+    *numBlocks = numBlocksTotal;
+    //printf("%d\n", *numBlocks);
+    return collectiveBlockDB;
+}
+
+
+
+/*
+ findAllBlocksOptimisedMPI
+ input blockDatabase and matrixDatabase
+ Finds all blocks in matrixDatabase and stores them in blockDatabase
+ Parallel optimised code
+ */
+Block *findAllBlocksOptimisedMPI(Block *collectiveBlockDB, double **mat, long long *kd, int *numBlocks, int start, int end) {
+    int numBlocksTotal = 0;
+    //Loop through matrix columns
+    #pragma omp parallel for
+    for(int col=start; col< end; col++) {
+        //Thread-private partial block database and counter
+        Block *blockDB = malloc(sizeof(Block));
+        int nextBlock = 0;
+        pair* pairContainer = malloc(ROWS * sizeof(pair));
+        // Create an array of doubles
+        for(int row = 0; row < ROWS; ++row){
+            //tempContainer[row] = mat[row][col];
+            pairContainer[row].value = mat[col][row];
+            pairContainer[row].key = kd[row];
+            pairContainer[row].row = row;
+        }
         
         // Use sliding technique to fill BlockDB
         // lower bound in array
@@ -287,7 +374,11 @@ Block *findBlocksOptimisedParallel(Block *collectiveBlockDB, double **mat, long 
                         blockDB[nextBlock].signature = pairContainer[i].key + pairContainer[j].key + pairContainer[k].key + pairContainer[upper-1].key;
                         blockDB[nextBlock].column = col;
                         //blockDB[nextBlock].values = getBlockValues(col, i, j, k, upper-1, mat);
-                        blockDB[nextBlock].rows = getRows(pairContainer[i].row, pairContainer[j].row, pairContainer[k].row, pairContainer[upper-1].row);
+                        //                        blockDB[nextBlock].rows = getRows(pairContainer[i].row, pairContainer[j].row, pairContainer[k].row, pairContainer[upper-1].row);
+                        blockDB[nextBlock].rows[0] = pairContainer[i].row;
+                        blockDB[nextBlock].rows[1] = pairContainer[j].row;
+                        blockDB[nextBlock].rows[2] = pairContainer[k].row;
+                        blockDB[nextBlock].rows[3] = pairContainer[upper-1].row;
                         //  Increment number of blocks
                         nextBlock++;
                         // Uncomment to print all rows / indexes being found
@@ -308,6 +399,7 @@ Block *findBlocksOptimisedParallel(Block *collectiveBlockDB, double **mat, long 
     //printf("%d\n", *numBlocks);
     return collectiveBlockDB;
 }
+
 
 /*
  findCollisionsParallel
@@ -471,7 +563,7 @@ Collision *mergeCollisionDatabases(Collision *cdb, Collision *partial, int *totC
         for(int j=0; j<partial[i].numBlocksInCollision; j++) {
             cdb[i + *totCollisions].columns[j] = partial[i].columns[j];
         }*/
-        
+
         //Copy collision data over
         cdb[i + *totCollisions] = partial[i];
     }
@@ -559,7 +651,7 @@ Collision *findCollisionsOptimised(Block *blockDB, int numBlocks, int *numberCol
             curBlocksInCollision = 0;
         }
     }
-    
+
     //Record number of collisions found
     *numberCollisionsFound = numCollisions;
 
@@ -683,34 +775,34 @@ Collision *findCollisionsOptimisedParallel(Block *blockDB, int numBlocks, int *n
 
     //Print amount of time spent in critical region
 //    printf("%5lf milli-seconds spent in critical region\n", (double) timeInCritical * 1000);
-    
+
     //Record number of collisions found
     *numberCollisionsFound = numTotalCollisions;
-    
+
     //Return collision database
     return collectiveCollisionDB;
 }
 
 /*
  getRowSet
- 
+
  Input two Collision structures
  Output int representing the number of unique row numbers found between the two collisions
  */
 int *getRowSet(Collision c1, Collision c2, int *numFound) {
-    
+
     //Array of rows to return
     int *rowSet = (int *) malloc(sizeof(int));
-    
+
     //Count number of unique values found
     int numUnique = 0;
-    
+
     //Record whether or not a row has already been seen
     bool found[ROWS];
     for(int i=0; i<ROWS; i++) {
         found[i] = false;
     }
-    
+
     //Loop through first collision's rows
     for(int i=0; i<4; i++) {
         //Get current row number
@@ -725,7 +817,7 @@ int *getRowSet(Collision c1, Collision c2, int *numFound) {
         numUnique++;
         rowSet = (int *) realloc(rowSet, (numUnique+1) * sizeof(int));
     }
-    
+
     //Loop through second collision's rows
     for(int i=0; i<4; i++) {
         //Get current row number
@@ -740,10 +832,10 @@ int *getRowSet(Collision c1, Collision c2, int *numFound) {
         numUnique++;
         rowSet = (int *) realloc(rowSet, (numUnique+1) * sizeof(int));
     }
-    
+
     //Record number found
     *numFound = numUnique;
-    
+
     //Return rowset
     return rowSet;
 }
@@ -751,7 +843,7 @@ int *getRowSet(Collision c1, Collision c2, int *numFound) {
 
 /*
  mergeCollisions
- 
+
  Input collision database, number of collisions, and pointer for number of merged collisions found
  Merge all collisions over same column set, and return array of MergedCollision structures
  //NEEDS WORK
@@ -760,7 +852,7 @@ MergedCollision *mergeCollisions(Collision *collisions, int numCollisions, int *
     //Create database of merged collisions
     int numFound = 0;
     MergedCollision *merged = (MergedCollision *) malloc(sizeof(MergedCollision));
-    
+
     //Loop through all collisions in collision database
     for(int i=0; i<numCollisions; i++) {
         for(int j=i+1; j<numCollisions; j++) {
